@@ -11,11 +11,11 @@ class SRAsJSONParser
 	end
 	
 	def all_subid
-		@wholeset.map{|set| set["sra_id"]}
+		@wholeset.map{|h| h["sra_id"]}
 	end
 	
-	def journal_info(subid)
-		@wholeset.select{|s| s["sra_id"] == subid }.map{|s| s.keep_if{|k,v| ["article_title","date","journal","pmid"].include?(k)}}
+	def paper_info(subid)
+		@wholeset.select{|h| h["sra_id"] == subid }.map{|h| h.keep_if{|k,v| ["article_title","date","journal","pmid"].include?(k)}}
 	end
 end
 
@@ -25,5 +25,7 @@ if __FILE__ == $0
 	if ARGV[0] == "--all-subid"
 		puts parse_json.all_subid
 	end
-	#pp parse_json.journal_info("SRA009031")
+
+	# test: get paper information
+	#pp parse_json.paper_info("SRA009031")
 end
