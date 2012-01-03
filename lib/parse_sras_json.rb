@@ -20,12 +20,12 @@ class SRAsJSONParser
 end
 
 if __FILE__ == $0
-	json = "./publication.json"
-	parse_json = SRAsJSONParser.new(json)
 	if ARGV[0] == "--all-subid"
+		json = "./publication.json"
+		parse_json = SRAsJSONParser.new(json)
 		puts parse_json.all_subid
+	else ARGV[0] == "--paper-info"
+		sub_id = ARGV[1]
+		puts parse_json.paper_info(sub_id)
 	end
-
-	# test: get paper information
-	#pp parse_json.paper_info("SRA009031")
 end
