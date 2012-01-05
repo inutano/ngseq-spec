@@ -1,43 +1,66 @@
-#!/usr/env/ruby
+#!/usr/env/ruby　
 # -*- coding: utf-8 -*-
 
 require "json"
 require "fileutils"
 
-class OperationQC
-	def loading
-		task = open("./lib/task.json"){|f| JSON.load(f)}
+class Monitoring
+	def initialize
+		open("./lib/in_progress.json","w"){|f| JSON.dump([], f)} if !File.exist?("./lib/in_progress.json")
+	end
+	
+	def tasklist
+		todo = open("./lib/todo.json"){|f| JSON.load(f)}
 		done = Dir.entries("./result")
-		task - done
+		in_progress = open("./lib/in_progress.json"){|f| JSON.load(f)}
+		todo - done - in_progress
 	end
 	
 	def diskcheck
-		usage = `df -h | grep '/home' | gawk '{print $5}'`.to_i
-		usage if usage <= 50
+		usage = `df -h | grep 'home' | gawk '{print $5}'`.gsub("%","").chomp.to_i
+		usage if usage <= 70
 	end
-
+	
 	def ftpsession
 		session = `ps aux | grep 'lftp' | wc -l`.to_i
 		session -1 if session <= 9
 	end
+end
 
-	def checkdumplist
-		dumplist = `ls ./litesra | grep '.lite.sra$'`.split.map{|n| n.gsub(".lite.sra","")}
-		!dumplist.empty?
+class QueueSubmission
+	def initialize(id)
+		@id = id
+		@expid = open("./lib/SRA_Run_Members.tab").readlines{|l| l =~ /^#{id}/}.join.split("\t")[2]
+		@exp_dbcenter = @expid.slice(0,3)
+		@exp_header = @expid.slice(0,6)
 	end
-
-	def checkfqlist
-		fqlist = `ls ./fq | grep '.fastq'`.split.map{|n| n.gsub(".bz2","").gsub(".gz","")}
-		!fqlist.empty?
+	
+	def get_sra
+		location = "ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{@exp_dbcenter}/#{@exp_header}/#{@expid}/#{@id}/#{@id}.lite.sra"
+		`./lib/get_sra.sh #{location}`
+		in_progress = open("./lib/in_progress.json"){|f| JSON.load(f)}
+		in_progress.push(@id)
+		open("./lib/in_progress.json","w"){|f| JSON.dump(in_progress, f)}
+	end
+	
+	def get_fastq # will implement later
+	end
+	
+	def unarchive
+	end
+	
+	def fastqc
 	end
 end
 
 if __FILE__ == $0
 	if ARGV[0] == "--transmit"
-		loading = OperationQC.loading
-		while OperationQC.diskcheck && OperationQC.ftpsession
-			id = loading.shift
-			OperationQC.lftp(id)
+		monitor = Monitoring.new
+		task = monitor.tasklist
+		while monitor.diskcheck && monitor.ftpsession
+			id = task.shift
+			queue = QueueSubmission.new(id)
+			queue.get_sra
 		end
 	end
 	
