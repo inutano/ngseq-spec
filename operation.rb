@@ -1,102 +1,59 @@
-#!/usr/env/ruby　
+#!/usr/env/ruby
 # -*- coding: utf-8 -*-
 
 require "json"
-require "fileutils"
 
-class Monitoring
-	def initialize
-		open("./lib/in_progress.json","w"){|f| JSON.dump([], f)} if !File.exist?("./lib/in_progress.json")
-	end
-	
+class Operation
 	def tasklist
 		todo = open("./lib/todo.json"){|f| JSON.load(f)}
 		done = Dir.entries("./result")
-		in_progress = open("./lib/in_progress.json"){|f| JSON.load(f)}
-		todo - done - in_progress
+		open("./lib/in_progress.json"){|f| JSON.dump([],f)} if !File.exist?("./lib/in_progress.json")
+		prog = open("./lib/in_progress.json"){|f| JSON.load(f)}
+		todo - done - prog
 	end
 	
 	def diskcheck
 		usage = `df -h | grep 'home' | gawk '{print $5}'`.gsub("%","").chomp.to_i
-		usage if usage <= 70
+		usage if usage <= 60
 	end
 	
 	def ftpsession
 		session = `ps aux | grep 'lftp' | wc -l`.to_i
-		session -1 if session <= 9
+		session -1 if session <= 12
 	end
-end
 
-class QueueSubmission
-	def initialize(id)
-		@id = id
-		@expid = open("./lib/SRA_Run_Members.tab").readlines{|l| l =~ /^#{id}/}.join.split("\t")[2]
-		@exp_dbcenter = @expid.slice(0,3)
-		@exp_header = @expid.slice(0,6)
-	end
-	
-	def get_sra
-		location = "ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{@exp_dbcenter}/#{@exp_header}/#{@expid}/#{@id}/#{@id}.lite.sra"
-		`./lib/get_sra.sh #{location}`
+	def get_sra(run_id)
+		exp_id = open("./lib/SRA_Run_Members.tab").readlines.select{|l| l =~ /^#{run_id}/}.join.split("\t")[2]
+		exp_dbcenter = exp_id.slice(0,3)
+		exp_header = exp_id.slice(0,6)
+		location = "ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_dbcenter}/#{exp_header}/#{exp_id}/#{run_id}"
+		`lftp -c "open #{location} && pget -n 8 #{run_id}.lite.sra -o ./data"`
 		in_progress = open("./lib/in_progress.json"){|f| JSON.load(f)}
-		in_progress.push(@id)
+		in_progress.push(run_id)
 		open("./lib/in_progress.json","w"){|f| JSON.dump(in_progress, f)}
 	end
 	
-	def get_fastq # will implement later
+	def fastqc(run_id)
+		`qsub -o ./log/fastqc_#{run_id}_#{Time.now.strftime("%m%d%H%M%S")}.log ./lib/fastqc.sh #{run_id}`
 	end
-	
-	def unarchive
-	end
-	
-	def fastqc
-	end
-end
+end	
 
 if __FILE__ == $0
 	if ARGV[0] == "--transmit"
-		monitor = Monitoring.new
-		task = monitor.tasklist
-		while monitor.diskcheck && monitor.ftpsession
-			id = task.shift
-			queue = QueueSubmission.new(id)
-			queue.get_sra
+		task = Operation.tasklist
+		thraeds = []
+		while Operation.diskcheck && Operation.ftpsession
+			th = Thread.fork(task.shift){|run_id| Operation.get_sra(run_id) }
+			threads << th
 		end
-	end
-	
-	if ARGV[0] == "--unarchive"
-		compressed = Dir.entries("./data").select{|fname| fname =~ /sra/ }
-		while OperationQC.diskcheck
-			fname = compressed.shift
-			OperationQC.unarchive(fname)
-		end
+		threads.each{|th| th.join}
 	end
 	
 	if ARGV[0] == "--fastqc"
-		decompressed = Dir.entries("./data").select{|fname| fname =~ /fastqc/ }
+		compressed = Dir.entries("./data").select{|fname| fname =~ /sra$/ }
 		while Operation.diskcheck
-			fname = decompressed.shift
-			OperationQC.fastqc(fname)
+			run_id = compressed.shift.gsub(".lite.sra","")
+			Operation.fastqc(run_id)
 		end
 	end
-end
-
-
-
-
-## ignition
-while diskcheck && ftpsession
-	puts "disk usage: #{diskcheck}"
-	puts "number of lftp process: #{ftpsession - 1}"
-	#`./lftp.sh -o ./litesra #{fileid}`
-end
-
-while checkdumplist
-	puts "start fastq-dump for #{fileid}"
-	#`qsub -j y -o log/fqdump_#{Time.now.strftime("%4Y%m%d%H%M%S")}.log fastqdump.sh`
-end
-
-while checkfqlist
-	puts "start fastqc for #{fileid}"
-	#`qsub -j y -o log/fastqc_#{Time.now.strftime("%4Y%m%d%H%M%S")}.log fastqc.sh`
 end
