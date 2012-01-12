@@ -77,5 +77,6 @@ if __FILE__ == $0
 		list_for_process = updater.list4process(pub_runid, available_runid)
 		
 		puts list_for_process.length
+		open("todo.json","w"){|f| JSON.dump(list_for_process, f)}
 	end
 end
