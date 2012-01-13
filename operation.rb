@@ -4,7 +4,6 @@
 require "yaml"
 require "json"
 require "twitter"
-require "fileutils"
 
 class Monitoring
 	def initialize
@@ -29,17 +28,28 @@ class Monitoring
 	end
 		
 	def diskusage
-		`df -h`.split("\n").select{|l| l=~ /home/ }.join.split(/\s+/).select{|w| w =~ /%/ }.join.gsub("%","").to_i
+		`df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4].to_i
 	end
 	
 	def ftpsession
 		`ps aux`.split("\n").select{|l| l =~ /lftp/ }.length
+	end
+	
+	def jobsubmitted
+		`qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
+	end
+	
+	def report_error(log)
+		cont = open(log).read
+		cont  =~ /error_message/ or cont =~ /failed/
 	end
 end
 
 class Operation
 	def initialize(run_id)
 		@run_id = run_id
+		@time = Time.now.strftime("%m%d%H%M%S")
+		@in_progress = "./lib/in_progress.json"
 	end
 	
 	def ftp_location
@@ -50,21 +60,19 @@ class Operation
 	end
 	
 	def get_sra(location)
-		`lftp -c "open #{location} && pget -n 8 #{@run_id}.lite.sra -o ./data" > ./log/lftp_#{@run_id}_#{Time.now.strftime("%m%d%H%M%S")}.log`
-		in_progress = open("./lib/in_progress.json"){|f| JSON.load(f)}
-		open("./lib/in_progress.json","w"){|f| JSON.dump(in_progress.push(@run_id), f)}
+		add = open(@in_progress){|f| JSON.load(f)}.push(@run_id)
+		open(@in_progress,"w"){|f| JSON.dump(add, f)}
+		log = "./log/lftp_#{@run_id}_#{@time}.log"
+		`lftp -c "open #{location} && pget -n 8 -vvv --log=#{log} #{@run_id}.lite.sra -o ./data"`
 	end
 	
 	def fastqc
-		`qsub -o ./log/fastqc_#{@run_id}_#{Time.now.strftime("%m%d%H%M%S")}.log ./lib/fastqc.sh #{@run_id}`
+		del = open(@in_progress){|f| JSON.load(f)}.delete_if{|id| id == @run_id}
+		open(@in_progress){|f| JSON.dump(del, f)}
+		log = "./log/fastqc_#{@run_id}_#{@time}.log"
+		`qsub -o #{log} ./lib/fastqc.sh #{@run_id}`
 	end
 	
-	def error_check
-		log = open(Dir.glob("./log/#{@run_id}*.log")).read
-		if log =~ /failed/m or log =~ /exception/m
-			"error reported: #{@run_id}"
-		end
-	end
 end
 
 class ReportTwitter
@@ -80,17 +88,18 @@ class ReportTwitter
 		@time = Time.now.strftime("%m/%d %H:%M:%S")
 	end
 	
-	def report_stat(usage, session)
-		message <<-MESSAGIO
+	def report_stat(usage, session, job)
+		message = <<-MESSAGIO
 @null #{@time}
 disk usage: #{usage}%
 #{session} ftp sessions
+#{job} job submitted
 		MESSAGIO
 		@tw.update(message)
 	end
 	
 	def report_job(todo, done, in_progress)
-		message <<-MESSAGIO
+		message = <<-MESSAGIO
 @null #{@time}
 #{done.length} of runs finished,
 #{in_progress.length} of runs in progress.
@@ -99,12 +108,15 @@ disk usage: #{usage}%
 		@tw.update(message)
 	end
 	
-	def report_error(error_message)
-		message <<-MESSAGIO
+	def report_error(error_occurred_list)
+		error_occurred_list.join(",").scan(/.{100}/).each do |list|
+			message = <<-MESSAGIO
 @null #{@time}
-#{error_message}
-		MESSAGIO
-		@tw.update(message)
+error occurred:
+#{list}
+			MESSAGIO
+			@tw.update(message)
+		end
 	end
 end
 
@@ -113,7 +125,7 @@ if __FILE__ == $0
 		m = Monitoring.new
 		task = m.todo - m.done - m.in_progress
 		threads = []
-		while m.diskusage <= 60 && m.ftpsession <=12
+		while m.diskusage <= 60 && m.ftpsession <= 12
 			op = Operation.new(task.shift)
 			th = Thread.fork{ op.get_sra(op.ftp_location) }
 			threads << th
@@ -131,19 +143,21 @@ if __FILE__ == $0
 	elsif ARGV[0] == "--report"
 		r = ReportTwitter.new
 		m = Monitoring.new
-		r.report_stat(m.diskusage, m.ftpsession)
+		r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
 		r.report_job(m.todo, m.done, m.in_progress)
 		
-	elsif ARGV[0] == "--cleaning"
+	elsif ARGV[0] == "--errorreport"
 		r = ReportTwitter.new
 		m = Monitoring.new
-		possibly_finished = m.in_progress - m.done # still in_progress list but have result directory
-		possibly_finished.each do |run_id|
-			error_message = Operation.new(run_id).error_check
-			r.report_error(error_message) if error_message
-		end
 		
-		finished = possibly_finished.delete_if{|run_id| Dir.glob("./result/#{run_id}/*fastqc.zip").empty? }
-		open("./lib/in_progress.json","w"){|f| JSON.dump((m.in_progress - finished), f)}
+		error_occurred = []
+		Dir.glob("./log/*.log").each do |log|
+			if Time.now - File.mtime(log) < 86400 && m.report_error(log)
+				log =~ /.+_(...[0-9]{6})_.+.log/
+				error_occurred.push($1)
+			end
+		end
+		r.report_error(error_occured)
 	end
 end
+
