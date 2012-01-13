@@ -9,7 +9,7 @@ require "fileutils"
 class Monitoring
 	def initialize
 		@in_progress = "./lib/in_progress.json"
-		FileUtils.touch(@in_progress) if !File.exist?(@in_progress)
+		open(@in_progress,"w"){|f| JSON.dump([],f)} if !File.exist?(@in_progress)
 	end
 	
 	def todo
@@ -50,7 +50,7 @@ class Operation
 	end
 	
 	def get_sra(location)
-		`lftp -c "open #{location} && pget -n 8 #{@run_id}.lite.sra -o ./data"`
+		`lftp -c "open #{location} && pget -n 8 #{@run_id}.lite.sra -o ./data" > ./log/lftp_#{@run_id}_#{Time.now.strftime("%m%d%H%M%S")}.log`
 		in_progress = open("./lib/in_progress.json"){|f| JSON.load(f)}
 		open("./lib/in_progress.json","w"){|f| JSON.dump(in_progress.push(@run_id), f)}
 	end
@@ -122,8 +122,9 @@ if __FILE__ == $0
 	
 	elsif ARGV[0] == "--fastqc"
 		m = Monitoring.new
-		while m.diskusage <= 60 && !m.compressed.empty?
-			op = Operation.new(m.compressed.shift.gsub(".lite.sra",""))
+		litesra = m.compressed
+		while m.diskusage <= 60 && !litesra.empty?
+			op = Operation.new(litesra.shift.gsub(".lite.sra",""))
 			op.fastqc
 		end
 	
