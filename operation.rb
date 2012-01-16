@@ -7,24 +7,24 @@ require "twitter"
 
 class Monitoring
 	def initialize
-		@in_progress = "./lib/in_progress.json"
-		open(@in_progress,"w"){|f| JSON.dump([],f)} if !File.exist?(@in_progress)
+		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
+		open(@path["in_progress"],"w"){|f| JSON.dump([],f)} if !File.exist?(@path["in_progress"])
 	end
 	
 	def todo
-		open("./lib/todo.json"){|f| JSON.load(f)}
+		open(@path["todo"]){|f| JSON.load(f)}
 	end
 	
 	def done
-		Dir.entries("./result")
+		Dir.entries(@path["result"])
 	end
 	
 	def in_progress
-		open(@in_progress){|f| JSON.load(f)}
+		open(@path["in_progress"]){|f| JSON.load(f)}
 	end
 	
 	def compressed
-		Dir.entries("./data").select{|fname| fname =~ /sra$/ }
+		Dir.entries(@path["data"]).select{|fname| fname =~ /sra$/ }
 	end
 		
 	def diskusage
@@ -38,48 +38,50 @@ class Monitoring
 	def jobsubmitted
 		`qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
 	end
-	
-	def report_error(log)
-		open(log).read =~ /error/ or /failed/
-	end
 end
 
 class Operation
 	def initialize(run_id)
 		@run_id = run_id
 		@time = Time.now.strftime("%m%d%H%M%S")
-		@in_progress = "./lib/in_progress.json"
+		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 	end
 	
 	def ftp_location
-		exp_id = open("./lib/SRA_Run_Members.tab").readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
+		exp_id = open(@path["run_members"]).readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
 		exp_dbcenter = exp_id.slice(0,3)
 		exp_header = exp_id.slice(0,6)
 		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_dbcenter}/#{exp_header}/#{exp_id}/#{@run_id}"
 	end
 	
 	def get_sra(location)
-		add = open(@in_progress){|f| JSON.load(f)}.push(@run_id)
-		open(@in_progress,"w"){|f| JSON.dump(add, f)}
-		`lftp -c "open #{location} && pget -n 8 -vvv --log=./log/lftp_#{@run_id}_#{@time}.log #{@run_id}.lite.sra -o ./data"`
+		add = open(@path["in_progress"]){|f| JSON.load(f)}.push(@run_id)
+		open(@path["in_progress"],"w"){|f| JSON.dump(add, f)}
+		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
+		`lftp -c "open #{location} && pget -n 8 -vvv --log=#{log} #{@run_id}.lite.sra -o #{@path["data"]}"`
 	end
 	
 	def fastqc
-		del = open(@in_progress){|f| JSON.load(f)}.delete_if{|id| id == @run_id}
-		open(@in_progress){|f| JSON.dump(del, f)}
-		`qsub -o ./log/fastqc_#{@run_id}_#{@time}.log ./lib/fastqc.sh #{@run_id}`
+		del = open(@path["in_progress"]){|f| JSON.load(f)}.delete_if{|id| id == @run_id}
+		open(@path["in_progress"]){|f| JSON.dump(del, f)}
+		log = "#{@path["log"]}/fastqc_#{@run_id}_#{@time}.log"
+		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
-	
+
+	def failure?
+		# if at least one log includes "error" or "failed", return true.
+		!Dir.glob("#{@path["log"]}/*#{@run_id}*.log").map{|l| open(l).read}.select{|t| t =~ /error/ or t =~ /failed/}.empty?
+	end
 end
 
 class ReportTwitter
 	def initialize
-		y_config = YAML.load_file("./lib/config.yaml")
+		tw_conf = YAML.load_file("/home/iNut/project/sra_quality/lib/config.yaml")["twitter"]
 		Twitter.configure do |config|
-			config.consumer_key = y_config["twitter"]["consumer_key"]
-			config.consumer_secret = y_config["twitter"]["consumer_secret"]
-			config.oauth_token = y_config["twitter"]["oauth_token"]
-			config.oauth_token_secret = y_config["twitter"]["oauth_token_secret"]
+			config.consumer_key = tw_config["consumer_key"]
+			config.consumer_secret = tw_conf["consumer_secret"]
+			config.oauth_token = tw_conf["oauth_token"]
+			config.oauth_token_secret = tw_conf["oauth_token_secret"]
 		end
 		@tw = Twitter::Client.new
 		@time = Time.now.strftime("%m/%d %H:%M:%S")
@@ -146,9 +148,8 @@ if __FILE__ == $0
 	elsif ARGV[0] == "--errorreport"
 		r = ReportTwitter.new
 		m = Monitoring.new
-		recent_log = Dir.glob("./log/*.log").select{|log_fname|  Time.now - File.mtime(log_fname) < 43200 }
-		error_occurred = recent_log.select{|log_fname| m.report_error(log_fname)}.map{|log_fname| log_fname[/.RR[0-9]{6}/]}
+		recent_log = Dir.glob("/home/iNut/project/sra_qualitycheck/log/*.log").select{|log_fname| Time.now - File.mtime(log_fname) < 43200 }
+		error_occurred = recent_log.map{|log_fname| log_fname[/.RR[0-9]{6}/]}.select{|id| Operation.new(id).failure? }
 		r.report_error(error_occured)
 	end
 end
-
