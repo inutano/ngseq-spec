@@ -1,8 +1,8 @@
 #!/usr/env/ruby
 # -*- coding: utf-8 -*-
 
-require "yaml"
 require "json"
+require "yaml"
 require "twitter"
 
 class Monitoring
@@ -40,8 +40,7 @@ class Monitoring
 	end
 	
 	def report_error(log)
-		cont = open(log).read
-		cont  =~ /error_message/ or cont =~ /failed/
+		open(log).read =~ /error/ or /failed/
 	end
 end
 
@@ -62,15 +61,13 @@ class Operation
 	def get_sra(location)
 		add = open(@in_progress){|f| JSON.load(f)}.push(@run_id)
 		open(@in_progress,"w"){|f| JSON.dump(add, f)}
-		log = "./log/lftp_#{@run_id}_#{@time}.log"
-		`lftp -c "open #{location} && pget -n 8 -vvv --log=#{log} #{@run_id}.lite.sra -o ./data"`
+		`lftp -c "open #{location} && pget -n 8 -vvv --log=./log/lftp_#{@run_id}_#{@time}.log #{@run_id}.lite.sra -o ./data"`
 	end
 	
 	def fastqc
 		del = open(@in_progress){|f| JSON.load(f)}.delete_if{|id| id == @run_id}
 		open(@in_progress){|f| JSON.dump(del, f)}
-		log = "./log/fastqc_#{@run_id}_#{@time}.log"
-		`qsub -o #{log} ./lib/fastqc.sh #{@run_id}`
+		`qsub -o ./log/fastqc_#{@run_id}_#{@time}.log ./lib/fastqc.sh #{@run_id}`
 	end
 	
 end
@@ -89,31 +86,31 @@ class ReportTwitter
 	end
 	
 	def report_stat(usage, session, job)
-		message = <<-MESSAGIO
-@null #{@time}
-disk usage: #{usage}%
-#{session} ftp sessions
-#{job} job submitted
+		message = <<-MESSAGIO.gsub(/^\s*/,"")
+			@null #{@time}
+			disk usage: #{usage}%
+			#{session} ftp sessions
+			#{job} job submitted
 		MESSAGIO
 		@tw.update(message)
 	end
 	
 	def report_job(todo, done, in_progress)
-		message = <<-MESSAGIO
-@null #{@time}
-#{done.length} of runs finished,
-#{in_progress.length} of runs in progress.
-#{done.length / todo.length}%
+		message = <<-MESSAGIO.gsub(/^\s*/,"")
+			@null #{@time}
+			#{done.length} of runs finished,
+			#{in_progress.length} of runs in progress.
+			#{done.length / todo.length}%
 		MESSAGIO
 		@tw.update(message)
 	end
 	
 	def report_error(error_occurred_list)
 		error_occurred_list.join(",").scan(/.{100}/).each do |list|
-			message = <<-MESSAGIO
-@null #{@time}
-error occurred:
-#{list}
+			message = <<-MESSAGIO.gsub(/^\s*/,"")
+				@null #{@time}
+				error occurred:
+				#{list}
 			MESSAGIO
 			@tw.update(message)
 		end
@@ -149,14 +146,8 @@ if __FILE__ == $0
 	elsif ARGV[0] == "--errorreport"
 		r = ReportTwitter.new
 		m = Monitoring.new
-		
-		error_occurred = []
-		Dir.glob("./log/*.log").each do |log|
-			if Time.now - File.mtime(log) < 86400 && m.report_error(log)
-				log =~ /.+_(...[0-9]{6})_.+.log/
-				error_occurred.push($1)
-			end
-		end
+		recent_log = Dir.glob("./log/*.log").select{|log_fname|  Time.now - File.mtime(log_fname) < 43200 }
+		error_occurred = recent_log.select{|log_fname| m.report_error(log_fname)}.map{|log_fname| log_fname[/.RR[0-9]{6}/]}
 		r.report_error(error_occured)
 	end
 end
