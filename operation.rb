@@ -58,7 +58,7 @@ class Operation
 		add = open(@path["in_progress"]){|f| JSON.load(f)}.push(@run_id)
 		open(@path["in_progress"],"w"){|f| JSON.dump(add, f)}
 		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
-		`lftp -c "open #{location} && pget -n 8 -vvv --log=#{log} #{@run_id}.lite.sra -o #{@path["data"]}"`
+		`lftp -c "open #{location} && pget -n 8 #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
 	
 	def fastqc
