@@ -70,7 +70,7 @@ class Operation
 
 	def failure?
 		# if at least one log includes "error" or "failed", return true.
-		!Dir.glob("#{@path["log"]}/*#{@run_id}*.log").map{|l| open(l).read}.select{|t| t =~ /error/ or t =~ /failed/}.empty?
+		!Dir.glob("#{@path["log"]}/*#{@run_id}*.log").map{|l| open(l).read}.select{|t| t =~ /error/ or t =~ /fail/}.empty?
 	end
 end
 
@@ -120,7 +120,7 @@ class ReportTwitter
 end
 
 if __FILE__ == $0
-	if ARGV[0] == "--transmit"
+	if ARGV.first == "--transmit"
 		m = Monitoring.new
 		task = m.todo - m.done - m.in_progress
 		threads = []
@@ -131,7 +131,7 @@ if __FILE__ == $0
 		end
 		threads.each{|th| th.join}
 	
-	elsif ARGV[0] == "--fastqc"
+	elsif ARGV.first == "--fastqc"
 		m = Monitoring.new
 		litesra = m.compressed
 		while m.diskusage <= 60 && !litesra.empty?
@@ -139,13 +139,13 @@ if __FILE__ == $0
 			op.fastqc
 		end
 	
-	elsif ARGV[0] == "--report"
+	elsif ARGV.first == "--report"
 		r = ReportTwitter.new
 		m = Monitoring.new
 		r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
 		r.report_job(m.todo, m.done, m.in_progress)
 		
-	elsif ARGV[0] == "--errorreport"
+	elsif ARGV.first == "--errorreport"
 		r = ReportTwitter.new
 		m = Monitoring.new
 		recent_log = Dir.glob("/home/iNut/project/sra_qualitycheck/log/*.log").select{|log_fname| Time.now - File.mtime(log_fname) < 43200 }
