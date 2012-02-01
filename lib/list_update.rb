@@ -62,44 +62,42 @@ class IDlistUpdate
 end
 
 if __FILE__ == $0
-	if ARGV.first == "--update"
-		# create db file and table if it  does not exist
-		SRAIDsInit.migrate( :up ) if !File.exist?("./production.sqlite3")
+	# create db file and table if it  does not exist
+	SRAIDsInit.migrate( :up ) if !File.exist?("./production.sqlite3")
 
-		updater = IDlistUpdate.new 
-		
-		puts "updating SRA_Run_Members.tab #{Time.now}"
-		run_members = updater.run_members
-		
-		puts "updating SRA_Accessions.tab #{Time.now}"
-		accessions = updater.accessions
-		
-		puts "putting live id to db.. #{Time.now}"
-		updater.available_runid(run_members).each do |id|
-			SRAID.create( :runid => id, :status => "available", :paper => false ) if SRAID.find_by_runid(id)
-		end
-		
-		puts "updating publication.json from DBCLS SRAs #{Time.now}"
-		pub_subid = updater.paperpublished_subid
-		
-		puts "mark paper-publushed run id on db #{Time.now}"
-		updater.paperpublished_runid(pub_subid, accessions).each do |id|
-			record = SRAID.find_by_runid(id)
-			if record
-				record.paper = true
-				record.save
-			end
-		end
-		
-		puts "mark already calcurated items as done #{Time.now}"
-		SRAID.all.each do |record|
-			runid = record.runid
-			result_dir = "../result/#{runid}"
-			if record.status != "ongoing" && File.exist?(result_dir)
-				record.status = "done"
-				record.save
-			end
-		end
+	updater = IDlistUpdate.new 
+
+	puts "updating SRA_Run_Members.tab #{Time.now}"
+	run_members = updater.run_members
 	
+	puts "updating SRA_Accessions.tab #{Time.now}"
+	accessions = updater.accessions
+	
+	puts "putting live id to db.. #{Time.now}"
+	updater.available_runid(run_members).each do |id|
+		SRAID.create( :runid => id, :status => "available", :paper => false ) if SRAID.find_by_runid(id)
+	end
+	
+	puts "updating publication.json from DBCLS SRAs #{Time.now}"
+	pub_subid = updater.paperpublished_subid
+	
+	puts "mark paper-publushed run id on db #{Time.now}"
+	updater.paperpublished_runid(pub_subid, accessions).each do |id|
+		record = SRAID.find_by_runid(id)
+		if record
+			record.paper = true
+			record.save
+		end
+	end
+	
+	puts "mark already calcurated items as done #{Time.now}"
+	SRAID.all.each do |record|
+		runid = record.runid
+		result_dir = "../result/#{runid}"
+		if record.status != "ongoing" && File.exist?(result_dir)
+			record.status = "done"
+			record.save
+		end
 	end
 end
+
