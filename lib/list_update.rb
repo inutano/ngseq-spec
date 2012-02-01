@@ -19,9 +19,7 @@ class SRAIDsInit < ActiveRecord::Migration
 			t.timestamps
 		end
 	end
-	
 	def self.down
-		drop_table :sraids
 	end
 end
 
@@ -33,69 +31,75 @@ class IDlistUpdate
 		@com = "open ftp.ncbi.nlm.nih.gov/sra/reports/Metadata && pget -n 8"
 		@run_members = "./SRA_Run_Members.tab"
 		@accessions = "./SRA_Accessions.tab"
+		@time = Time.now.strftime("%m%d%H%M%S")
 	end
-
 	def run_members
-		FileUtils.mv(@run_members,"./previous/SRA_Run_Members_#{Time.now.strftime("%m%d%H%M%S")}.tab") if File.exist?(@run_members)
+		FileUtils.mv(@run_members,"./previous/SRA_Run_Members_#{@time}.tab") if File.exist?(@run_members)
 		`lftp -c "#{@com} SRA_Run_Members.tab"`
 		File.open(@run_members).readlines
 	end
-	
 	def accessions
-		FileUtils.mv(@accessions,"./previous/SRA_Accessions_#{Time.now.strftime("%m%d%H%M%S")}.tab") if File.exist?(@accessions)
+		FileUtils.mv(@accessions,"./previous/SRA_Accessions_#{@time}.tab") if File.exist?(@accessions)
 		`lftp -c "#{@com} SRA_Accessions.tab"`
 		File.open(@accessions).readlines
 	end
-	
 	def available_runid(run_members)
-		run_members.delete_if{|l| l !~ /live/ }.map{|l| l.split("\t").first }.uniq
+		run_members.select{|l| l =~ /live/ }.map{|l| l.split("\t").first }.uniq
 	end
-	
 	def paperpublished_subid
-		FileUtils.mv("./publication.json","./previous/publication_#{Time.now.strftime("%m%d%H%M%S")}.json") if File.exist?("./publication.json")
+		FileUtils.mv("./publication.json","./previous/publication_#{@time}.json") if File.exist?("./publication.json")
 		`wget -O ./publication.json "http://sra.dbcls.jp/cgi-bin/publication2.php"`
 		SRAsJSONParser.new("./publication.json").all_subid
 	end
-	
 	def paperpublished_runid(pub_subid, accessions)
 		sub_run = {}
-		accessions.delete_if{|l| !(l =~ /^(S|E|D)RR/ && l.include?("live"))}.each do |l|
+		accessions.select{|l| l =~ /^(S|E|D)RR/ && l.include?("live")}.each do |l|
 			sub_run[l.split(",").last] ||= []
 			sub_run[l.split(",").last].push(l.split(",").first)
 		end
 		pub_subid.map{|subid| sub_run[subid]}.flatten.uniq
 	end
-	
-	def list4process(pub_runid, available_runid)
-		(pub_runid + available_runid).uniq
-	end
 end
 
-
-
 if __FILE__ == $0
-	if ARGV[0] == "--run-update"
+	if ARGV.first == "--update"
+		# create db file and table if it  does not exist
+		SRAIDsInit.migrate( :up ) if !File.exist?("./production.sqlite3")
+
 		updater = IDlistUpdate.new 
 		
-		# update index of SRA runid
-		runid = updater.run_members
-
-		# update index of SRA accessions
+		puts "updating SRA_Run_Members.tab #{Time.now}"
+		run_members = updater.run_members
+		
+		puts "updating SRA_Accessions.tab #{Time.now}"
 		accessions = updater.accessions
 		
-		# update "live" runid
-		available_runid = updater.available_runid(runid)
+		puts "putting live id to db.. #{Time.now}"
+		updater.available_runid(run_members).each do |id|
+			SRAID.create( :runid => id, :status => "available", :paper => false ) if SRAID.find_by_runid(id)
+		end
 		
-		# update paperpublished submission id
+		puts "updating publication.json from DBCLS SRAs #{Time.now}"
 		pub_subid = updater.paperpublished_subid
 		
-		# update paperpublushed run id, one should be qualitycheck-processed
-		pub_runid = updater.paperpublished_runid(pub_subid, accessions)
+		puts "mark paper-publushed run id on db #{Time.now}"
+		updater.paperpublished_runid(pub_subid, accessions).each do |id|
+			record = SRAID.find_by_runid(id)
+			if record
+				record.paper = true
+				record.save
+			end
+		end
 		
-		# update list for qualitycheck process
-		list_for_process = updater.list4process(pub_runid, available_runid)
-		
-		puts list_for_process.length
-		open("todo.json","w"){|f| JSON.dump(list_for_process, f)}
+		puts "mark already calcurated items as done #{Time.now}"
+		SRAID.all.each do |record|
+			runid = record.runid
+			result_dir = "../result/#{runid}"
+			if record.status != "ongoing" && File.exist?(result_dir)
+				record.status = "done"
+				record.save
+			end
+		end
+	
 	end
 end
