@@ -1,26 +1,37 @@
 #!/usr/env/ruby
 # -*- coding: utf-8 -*-
 
-require "json"
 require "yaml"
 require "twitter"
+require "active_record"
+
+ActiveRecord::Base.establish_connection(
+	:adapter => "sqlite3",
+	:database => "./lib/production.sqlite3"
+)
+
+class SRAID < ActiveRecord::Base
+end
 
 class Monitoring
 	def initialize
 		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
-		open(@path["in_progress"],"w"){|f| JSON.dump([],f)} if !File.exist?(@path["in_progress"])
 	end
 	
-	def todo
-		open(@path["todo"]){|f| JSON.load(f)}
+	def paper_published
+		SRAID.where( :status => "available", :paper => true ).map{|r| r.runid }
+	end
+
+	def paper_unpublished
+		SRAID.where( :status => "available", :paper => false ).map{|r| r.runid }
 	end
 	
 	def done
-		Dir.entries(@path["result"])
+		SRAID.where( :status => "done" ).map{|r| r.runid }
 	end
 	
-	def in_progress
-		open(@path["in_progress"]){|f| JSON.load(f)}
+	def ongoing
+		SRAID.where( :status => "ongoing" ).map{|r| r.runid }
 	end
 	
 	def compressed
@@ -55,17 +66,19 @@ class Operation
 	end
 	
 	def get_sra(location)
-		add = open(@path["in_progress"]){|f| JSON.load(f)}.push(@run_id)
-		open(@path["in_progress"],"w"){|f| JSON.dump(add, f)}
+		record = SRAID.find_by_runid(@runid)
+		record.status = "ongoing"
+		record.save
 		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
 		`lftp -c "open #{location} && pget -n 8 #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
 	
 	def fastqc
-		del = open(@path["in_progress"]){|f| JSON.load(f)}.delete_if{|id| id == @run_id}
-		open(@path["in_progress"]){|f| JSON.dump(del, f)}
 		log = "#{@path["log"]}/fastqc_#{@run_id}_#{@time}.log"
 		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
+		record = SRAID.find_by_runid(@runid)
+		record.status = "done"
+		record.save
 	end
 
 	def failure?
@@ -122,7 +135,10 @@ end
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
 		m = Monitoring.new
-		task = m.todo - m.done - m.in_progress
+		task = m.paper_published
+		if task.empty?
+			task = m.paper_unpublished
+		end
 		threads = []
 		while m.diskusage <= 60 && m.ftpsession <= 12
 			op = Operation.new(task.shift)
@@ -143,7 +159,7 @@ if __FILE__ == $0
 		r = ReportTwitter.new
 		m = Monitoring.new
 		r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
-		r.report_job(m.todo, m.done, m.in_progress)
+		r.report_job(m.todo, m.done, m.ongoing)
 		
 	elsif ARGV.first == "--errorreport"
 		r = ReportTwitter.new
