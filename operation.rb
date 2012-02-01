@@ -89,7 +89,7 @@ end
 
 class ReportTwitter
 	def initialize
-		tw_conf = YAML.load_file("/home/iNut/project/sra_quality/lib/config.yaml")["twitter"]
+		tw_conf = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["twitter"]
 		Twitter.configure do |config|
 			config.consumer_key = tw_config["consumer_key"]
 			config.consumer_secret = tw_conf["consumer_secret"]
@@ -169,3 +169,4 @@ if __FILE__ == $0
 		r.report_error(error_occured)
 	end
 end
+
