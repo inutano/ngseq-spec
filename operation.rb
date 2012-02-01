@@ -91,7 +91,7 @@ class ReportTwitter
 	def initialize
 		tw_conf = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["twitter"]
 		Twitter.configure do |config|
-			config.consumer_key = tw_config["consumer_key"]
+			config.consumer_key = tw_conf["consumer_key"]
 			config.consumer_secret = tw_conf["consumer_secret"]
 			config.oauth_token = tw_conf["oauth_token"]
 			config.oauth_token_secret = tw_conf["oauth_token_secret"]
@@ -166,7 +166,6 @@ if __FILE__ == $0
 		m = Monitoring.new
 		recent_log = Dir.glob("/home/iNut/project/sra_qualitycheck/log/*.log").select{|log_fname| Time.now - File.mtime(log_fname) < 43200 }
 		error_occurred = recent_log.map{|log_fname| log_fname[/.RR[0-9]{6}/]}.select{|id| Operation.new(id).failure? }
-		r.report_error(error_occured)
+		r.report_error(error_occurred)
 	end
 end
-
