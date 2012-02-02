@@ -52,12 +52,10 @@ class IDlistUpdate
 		SRAsJSONParser.new("./publication.json").all_subid
 	end
 	def paperpublished_runid(pub_subid, accessions)
-		sub_run = {}
-		accessions.select{|l| l =~ /^(S|E|D)RR/ && l.include?("live")}.each do |l|
-			sub_run[l.split(",").last] ||= []
-			sub_run[l.split(",").last].push(l.split(",").first)
+		sub_runid = pub_subid.map do |subid|
+			accessions.select{|l| l.include?(subid) && l=~ /^.RR/ && l.include?("live") }.map{|l| l.split("\t").first }
 		end
-		pub_subid.map{|subid| sub_run[subid]}.flatten.uniq
+		sub_runid.flatten.uniq
 	end
 end
 
@@ -75,7 +73,7 @@ if __FILE__ == $0
 	
 	puts "putting live id to db.. #{Time.now}"
 	updater.available_runid(run_members).each do |id|
-		SRAID.create( :runid => id, :status => "available", :paper => false ) if SRAID.find_by_runid(id)
+		SRAID.create( :runid => id, :status => "available", :paper => false ) if !SRAID.find_by_runid(id)
 	end
 	
 	puts "updating publication.json from DBCLS SRAs #{Time.now}"
@@ -94,7 +92,7 @@ if __FILE__ == $0
 	SRAID.all.each do |record|
 		runid = record.runid
 		result_dir = "../result/#{runid}"
-		if record.status != "ongoing" && File.exist?(result_dir)
+		if record.status != "done" && record.status != "ongoing" && File.exist?(result_dir)
 			record.status = "done"
 			record.save
 		end

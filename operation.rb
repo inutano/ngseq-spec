@@ -26,6 +26,10 @@ class Monitoring
 		SRAID.where( :status => "available", :paper => false ).map{|r| r.runid }
 	end
 	
+	def todo
+		SRAID.where( :status => "available" ).map{|r| r.runid }
+	end
+	
 	def done
 		SRAID.where( :status => "done" ).map{|r| r.runid }
 	end
@@ -110,11 +114,11 @@ class ReportTwitter
 		@tw.update(message)
 	end
 	
-	def report_job(todo, done, in_progress)
+	def report_job(todo, done, ongoing)
 		message = <<-MESSAGIO.gsub(/^\s*/,"")
 			@null #{@time}
 			#{done.length} of runs finished,
-			#{in_progress.length} of runs in progress.
+			#{ongoing.length} of runs in progress.
 			#{done.length / todo.length}%
 		MESSAGIO
 		@tw.update(message)
