@@ -4,11 +4,14 @@
 require "yaml"
 require "twitter"
 require "active_record"
+require "logger"
 
 ActiveRecord::Base.establish_connection(
 	:adapter => "sqlite3",
 	:database => "./lib/production.sqlite3"
 )
+
+ActiveRecord::Base.logger = Logger.new("./log/database.log")
 
 class SRAID < ActiveRecord::Base
 	def to_s
@@ -22,7 +25,7 @@ class Monitoring
 	end
 	
 	def task
-		SRAID.where( :status => "available" ).order("paper DESC, runid ASC").limit(100).map{|r| r.runid }
+		SRAID.where( :status => "available" ).order("paper DESC, runid ASC").map{|r| r.runid }
 	end
 
 	def paper_published
