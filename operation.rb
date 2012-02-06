@@ -18,6 +18,10 @@ class Monitoring
 		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 	end
 	
+	def task
+		SRAID.where( :status => "available").order("paper DESC, runid ASC").limit(100).map{|r| r.runid }
+	end
+
 	def paper_published
 		SRAID.where( :status => "available", :paper => true ).map{|r| r.runid }
 	end
@@ -139,17 +143,14 @@ end
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
 		m = Monitoring.new
-		task = m.paper_published
-		if task.empty?
-			task = m.paper_unpublished
-		end
+		task = m.task
 		threads = []
 		while m.diskusage <= 60 && m.ftpsession <= 12
 			op = Operation.new(task.shift)
 			th = Thread.fork{ op.get_sra(op.ftp_location) }
 			threads << th
 		end
-		threads.each{|th| th.join}
+		threads.each{|th| th.join }
 	
 	elsif ARGV.first == "--fastqc"
 		m = Monitoring.new
