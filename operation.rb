@@ -132,7 +132,7 @@ class ReportTwitter
 			@null #{@time}
 			#{done.length} of runs finished,
 			#{ongoing.length} of runs in progress.
-			#{(done.length / all.length) * 100}%
+			#{(done.length.to_f / all.length) * 100}%
 		MESSAGIO
 		@tw.update(message)
 	end
