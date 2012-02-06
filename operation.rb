@@ -23,7 +23,7 @@ class Monitoring
 	def initialize
 		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 	end
-	
+		
 	def task
 		SRAID.where( :status => "available" ).order("paper DESC, runid ASC").map{|r| r.runid }
 	end
@@ -98,14 +98,9 @@ class Operation
 		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
 	
-	def lftp_errorcheck
-		puts "errorcheck for #{@runid}"
+	def lftp_failed?
 		log = Dir.glob("#{@path["log"]}/lftp_#{@run_id}*.log}").sort.last
-		if log && open(log).read =~ /fail/
-			record = SRAID.find_by_runid(@runid)
-			record.status = "missing"
-			record.save
-		end
+		(log && open(log).read =~ /fail/)
 	end
 end
 
@@ -132,12 +127,12 @@ class ReportTwitter
 		@tw.update(message)
 	end
 	
-	def report_job(todo, done, ongoing)
+	def report_job(all, done, ongoing)
 		message = <<-MESSAGIO.gsub(/^\s*/,"")
 			@null #{@time}
 			#{done.length} of runs finished,
 			#{ongoing.length} of runs in progress.
-			#{done.length / todo.length}%
+			#{(done.length / all.length) * 100}%
 		MESSAGIO
 		@tw.update(message)
 	end
@@ -150,11 +145,6 @@ class ReportTwitter
 				#{list.gsub(/,$/,"")}
 			MESSAGIO
 			@tw.update(message)
-		end
-		missing_list.each do |runid|
-			record = SRAID.find_by_runid(runid)
-			record.status = "reported"
-			record.save
 		end
 	end
 end
@@ -169,16 +159,26 @@ if __FILE__ == $0
 			runid = task.shift
 			executed_id.push(runid)
 			
-			op = Operation.new(runid)
-			th = Thread.fork{ op.get_sra(op.lftp_location) }
+			record = SRAID.find_by_runid(runid)
+			puts record.to_s
 			
-			record = SRAID.find_by_runid(@runid)
 			record.status = "ongoing"
 			record.save
+
+			op = Operation.new(runid)
+			loc = op.ftp_location
+			th = Thread.fork{ op.get_sra(loc) }
 			threads << th
 		end
 		threads.each{|th| th.join }
-		executed_id.each{|id| Operation.new(id).lftp_errorcheck }
+
+		executed_id.each do |runid|
+			if Operation.new(runid).lftp_failed?
+				record = SRAID.find_by_runid(runid)
+				record.status = "missing"
+				record.save
+			end
+		end
 	
 	elsif ARGV.first == "--fastqc"
 		m = Monitoring.new
@@ -197,28 +197,26 @@ if __FILE__ == $0
 		r = ReportTwitter.new
 		m = Monitoring.new
 		r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
-		r.report_job(m.todo, m.done, m.ongoing)
+		r.report_job(SRAID.all, m.done, m.ongoing)
 		
 	elsif ARGV.first == "--errorreport"
 		r = ReportTwitter.new
 		m = Monitoring.new
-		r.report_error(m.missing)
+		missing_list = m.missing
+		r.report_error(missing_list)
 		
+		missing_list.each do |runid|
+			record = SRAID.find_by_runid(runid)
+			record.status = "reported"
+			record.save
+		end
+				
 	elsif ARGV.first == "--debug"
 		m = Monitoring.new
 	
 		puts "number of task: #{m.task.length}"
-		f = m.task.shift
-		puts "first task: #{f}"
-		puts "ftp location: #{Operation.new(f).ftp_location}"
-		puts "database record: #{SRAID.find_by_runid(f).to_s}"
-	
-		puts "ongoing: #{m.ongoing.length}"
-		puts "ongoing ids :"
-		puts m.ongoing.length
-		puts m.ongoing
+		puts "ongoing: #{m.ongoing.uniq.length}"
+		puts "missing: #{m.missing.length}"
 		
-		puts "missing ids :"
-		puts SRAID.where( :status => "missing" ).map{|r| r.runid }
 	end
 end
