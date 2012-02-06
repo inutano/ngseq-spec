@@ -92,24 +92,12 @@ class Operation
 		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
 		`lftp -c "open #{location} && get #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
-
-	def hold
-		record = SRAID.find_by_runid(@runid)
-		record.status = "ongoing"
-		record.save
-	end
 	
 	def fastqc
 		log = "#{@path["log"]}/fastqc_#{@run_id}_#{@time}.log"
 		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
 	
-	def terminate
-		record = SRAID.find_by_runid(@runid)
-		record.status = "done"
-		record.save
-	end
-		
 	def lftp_errorcheck
 		puts "errorcheck for #{@runid}"
 		log = Dir.glob("#{@path["log"]}/lftp_#{@run_id}*.log}").sort.last
@@ -184,7 +172,9 @@ if __FILE__ == $0
 			op = Operation.new(runid)
 			th = Thread.fork{ op.get_sra(op.lftp_location) }
 			
-			op.hold
+			record = SRAID.find_by_runid(@runid)
+			record.status = "ongoing"
+			record.save
 			threads << th
 		end
 		threads.each{|th| th.join }
@@ -194,9 +184,13 @@ if __FILE__ == $0
 		m = Monitoring.new
 		litesra = m.compressed
 		while m.diskusage <= 60 && !litesra.empty?
-			op = Operation.new(litesra.shift.gsub(".lite.sra",""))
+			runid = litesra.shift.gsub(".lite.sra","")
+			op = Operation.new(runid)
 			op.fastqc
-			op.terminate
+			
+			record = SRAID.find_by_runid(runid)
+			record.status = "done"
+			record.save
 		end
 	
 	elsif ARGV.first == "--report"
