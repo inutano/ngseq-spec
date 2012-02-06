@@ -11,6 +11,9 @@ ActiveRecord::Base.establish_connection(
 )
 
 class SRAID < ActiveRecord::Base
+	def to_s
+		"#{runid}, status => #{status}, paper => #{paper}"
+	end
 end
 
 class Monitoring
@@ -60,6 +63,10 @@ class Monitoring
 	
 	def missing
 		SRAID.where( :status => "missing" ).map{|r| r.runid }
+	end
+	
+	def ongoing
+		SRAID.where( :status => "ongoing" ).map{|r| r.runid }
 	end
 end
 
@@ -163,6 +170,9 @@ if __FILE__ == $0
 			runid = task.shift
 			executed_id.push(runid)
 			op = Operation.new(runid)
+			puts "operation: transmit / #{SRAID.find_by_runid(runid).to_s}"
+			puts "#{op.ftp_location}"
+
 			th = Thread.fork{ op.get_sra(op.ftp_location) }
 			threads << th
 		end
@@ -187,5 +197,18 @@ if __FILE__ == $0
 		r = ReportTwitter.new
 		m = Monitoring.new
 		r.report_error(m.missing)
+		
+	elsif ARGV.first == "--debug"
+		m = Monitoring.new
+	
+		puts "number of task: #{m.task.length}"
+		f = m.task.shift
+		puts "first task: #{f}"
+		puts "ftp location: #{Operation.new(f).ftp_location}"
+		puts "database record: #{SRAID.find_by_runid(f).to_s}"
+	
+		puts "ongoing: #{m.ongoing.length}"
+		puts "ongoing ids :"
+		puts m.ongoing
 	end
 end
