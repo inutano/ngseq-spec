@@ -19,7 +19,7 @@ class Monitoring
 	end
 	
 	def task
-		SRAID.where( :status => "available").order("paper DESC, runid ASC").limit(100).map{|r| r.runid }
+		SRAID.where( :status => "available" ).order("paper DESC, runid ASC").limit(100).map{|r| r.runid }
 	end
 
 	def paper_published
@@ -57,6 +57,10 @@ class Monitoring
 	def jobsubmitted
 		`qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
 	end
+	
+	def missing
+		SRAID.where( :status => "missing" ).map{|r| r.runid }
+	end
 end
 
 class Operation
@@ -78,7 +82,7 @@ class Operation
 		record.status = "ongoing"
 		record.save
 		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
-		`lftp -c "open #{location} && pget -n 8 #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
+		`lftp -c "open #{location} && get #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
 	
 	def fastqc
@@ -88,10 +92,14 @@ class Operation
 		record.status = "done"
 		record.save
 	end
-
-	def failure?
-		# if at least one log includes "error" or "failed", return true.
-		!Dir.glob("#{@path["log"]}/*#{@run_id}*.log").map{|l| open(l).read}.select{|t| t =~ /error/ or t =~ /fail/}.empty?
+	
+	def lftp_errorcheck
+		log = Dir.glob("#{@path["log"]}/lftp_#{@run_id}*.log}").sort.first
+		if File.open(log).read =~ /fail/
+			record = SRAID.find_by_runid(@runid)
+			record.status = "missing"
+			record.save
+		end
 	end
 end
 
@@ -128,14 +136,19 @@ class ReportTwitter
 		@tw.update(message)
 	end
 	
-	def report_error(error_occurred_list)
-		error_occurred_list.join(",").scan(/.{100}/).each do |list|
+	def report_error(missing_list)
+		missing_list.join(",").scan(/.{100}/).each do |list|
 			message = <<-MESSAGIO.gsub(/^\s*/,"")
 				@null #{@time}
 				error occurred:
-				#{list}
+				#{list.gsub(/,$/,"")}
 			MESSAGIO
 			@tw.update(message)
+		end
+		missing_list.each do |runid|
+			record = SRAID.find_by_runid(runid)
+			record.status = "reported"
+			record.save
 		end
 	end
 end
@@ -145,12 +158,16 @@ if __FILE__ == $0
 		m = Monitoring.new
 		task = m.task
 		threads = []
+		executed_id = []
 		while m.diskusage <= 60 && m.ftpsession <= 12
-			op = Operation.new(task.shift)
+			runid = task.shift
+			executed_id.push(runid)
+			op = Operation.new(runid)
 			th = Thread.fork{ op.get_sra(op.ftp_location) }
 			threads << th
 		end
 		threads.each{|th| th.join }
+		executed_id.each{|id| Operation.new(id).lftp_errorcheck }
 	
 	elsif ARGV.first == "--fastqc"
 		m = Monitoring.new
@@ -169,8 +186,6 @@ if __FILE__ == $0
 	elsif ARGV.first == "--errorreport"
 		r = ReportTwitter.new
 		m = Monitoring.new
-		recent_log = Dir.glob("/home/iNut/project/sra_qualitycheck/log/*.log").select{|log_fname| Time.now - File.mtime(log_fname) < 43200 }
-		error_occurred = recent_log.map{|log_fname| log_fname[/.RR[0-9]{6}/]}.select{|id| Operation.new(id).failure? }
-		r.report_error(error_occurred)
+		r.report_error(m.missing)
 	end
 end
