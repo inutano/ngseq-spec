@@ -92,18 +92,28 @@ class Operation
 		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
 		`lftp -c "open #{location} && get #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
+
+	def hold
+		record = SRAID.find_by_runid(@runid)
+		record.status = "ongoing"
+		record.save
+	end
 	
 	def fastqc
 		log = "#{@path["log"]}/fastqc_#{@run_id}_#{@time}.log"
 		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
+	end
+	
+	def terminate
 		record = SRAID.find_by_runid(@runid)
 		record.status = "done"
 		record.save
 	end
-	
+		
 	def lftp_errorcheck
-		log = File.open(Dir.glob("#{@path["log"]}/lftp_#{@run_id}*.log}").sort.first).read
-		if log && log =~ /fail/
+		puts "errorcheck for #{@runid}"
+		log = Dir.glob("#{@path["log"]}/lftp_#{@run_id}*.log}").sort.last
+		if log && open(log).read =~ /fail/
 			record = SRAID.find_by_runid(@runid)
 			record.status = "missing"
 			record.save
@@ -170,17 +180,12 @@ if __FILE__ == $0
 		while m.diskusage <= 60 && m.ftpsession <= 12
 			runid = task.shift
 			executed_id.push(runid)
-			puts "operation: transmit / #{SRAID.find_by_runid(runid).to_s}"
-
+			
 			op = Operation.new(runid)
-			loc = op.ftp_location
+			th = Thread.fork{ op.get_sra(op.lftp_location) }
 			
-			th = Thread.fork{ op.get_sra(loc) }
+			op.hold
 			threads << th
-			
-			record = SRAID.find_by_runid(runid)
-			record.status = "ongoing"
-			record.save
 		end
 		threads.each{|th| th.join }
 		executed_id.each{|id| Operation.new(id).lftp_errorcheck }
@@ -191,6 +196,7 @@ if __FILE__ == $0
 		while m.diskusage <= 60 && !litesra.empty?
 			op = Operation.new(litesra.shift.gsub(".lite.sra",""))
 			op.fastqc
+			op.terminate
 		end
 	
 	elsif ARGV.first == "--report"
@@ -215,6 +221,10 @@ if __FILE__ == $0
 	
 		puts "ongoing: #{m.ongoing.length}"
 		puts "ongoing ids :"
+		puts m.ongoing.length
 		puts m.ongoing
+		
+		puts "missing ids :"
+		puts SRAID.where( :status => "missing" ).map{|r| r.runid }
 	end
 end
