@@ -158,18 +158,20 @@ if __FILE__ == $0
 		while m.diskusage <= 60 && m.ftpsession <= 12
 			runid = task.shift
 			executed_id.push(runid)
-			
-			record = SRAID.find_by_runid(runid)
-			puts record.to_s
-			
-			record.status = "ongoing"
-			record.save
-
 			op = Operation.new(runid)
 			loc = op.ftp_location
 			th = Thread.fork{ op.get_sra(loc) }
 			threads << th
 		end
+		
+		executed_id.each do |runid|
+			record = SRAID.find_by_runid(runid)			
+			record.status = "ongoing"
+			record.save
+			puts record.to_s		
+		end
+		
+		# waiting for lftp sessions to finish
 		threads.each{|th| th.join }
 
 		executed_id.each do |runid|
@@ -177,9 +179,10 @@ if __FILE__ == $0
 				record = SRAID.find_by_runid(runid)
 				record.status = "missing"
 				record.save
+				puts record.to_s
 			end
 		end
-	
+
 	elsif ARGV.first == "--fastqc"
 		m = Monitoring.new
 		litesra = m.compressed
@@ -218,5 +221,16 @@ if __FILE__ == $0
 		puts "ongoing: #{m.ongoing.uniq.length}"
 		puts "missing: #{m.missing.length}"
 		
+		m.ongoing.each do |id|
+			log = Dir.glob("./log/lftp_#{id}*").sort.last
+			puts open(log).read
+			if open(log).read =~ /failed/
+				record = SRAID.find_by_runid(id)
+				puts record.to_s
+				record.status = "missing"
+				record.save
+				puts record.to_s
+			end
+		end
 	end
 end
