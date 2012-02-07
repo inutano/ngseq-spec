@@ -13,6 +13,14 @@ ActiveRecord::Base.establish_connection(
 
 ActiveRecord::Base.logger = Logger.new("./log/database.log")
 
+tw_conf = YAML.load_file("./lib/config.yaml")["twitter"]
+Twitter.configure do |config|
+	config.consumer_key = tw_conf["consumer_key"]
+	config.consumer_secret = tw_conf["consumer_secret"]
+	config.oauth_token = tw_conf["oauth_token"]
+	config.oauth_token_secret = tw_conf["oauth_token_secret"]
+end
+
 class SRAID < ActiveRecord::Base
 	def to_s
 		"#{runid}, status => #{status}, paper => #{paper}"
@@ -21,13 +29,13 @@ end
 
 class Monitoring
 	def initialize
-		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
+		@path = YAML.load_file("./lib/config.yaml")["path"]
 	end
-		
+	
 	def task
 		SRAID.where( :status => "available" ).order("paper DESC, runid ASC").map{|r| r.runid }
 	end
-
+	
 	def paper_published
 		SRAID.where( :status => "available", :paper => true ).map{|r| r.runid }
 	end
@@ -36,7 +44,7 @@ class Monitoring
 		SRAID.where( :status => "available", :paper => false ).map{|r| r.runid }
 	end
 	
-	def todo
+	def available
 		SRAID.where( :status => "available" ).map{|r| r.runid }
 	end
 	
@@ -46,6 +54,14 @@ class Monitoring
 	
 	def ongoing
 		SRAID.where( :status => "ongoing" ).map{|r| r.runid }
+	end
+	
+	def missing
+		SRAID.where( :status => "missing" ).map{|r| r.runid }
+	end
+	
+	def reported
+		SRAID.where( :status => "reported" ).map{|r| r.runid }
 	end
 	
 	def compressed
@@ -62,61 +78,38 @@ class Monitoring
 	
 	def jobsubmitted
 		`qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
-	end
-	
-	def missing
-		SRAID.where( :status => "missing" ).map{|r| r.runid }
-	end
-	
-	def ongoing
-		SRAID.where( :status => "ongoing" ).map{|r| r.runid }
-	end
-	
-	def reported
-		SRAID.where( :status => "reported" ).map{|r r.runid }
-	end
+	end	
 end
 
 class Operation
 	def initialize(run_id)
 		@run_id = run_id
 		@time = Time.now.strftime("%m%d%H%M%S")
-		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 	end
 	
 	def ftp_location
 		exp_id = open(@path["run_members"]).readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
-		exp_dbcenter = exp_id.slice(0,3)
-		exp_header = exp_id.slice(0,6)
-		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_dbcenter}/#{exp_header}/#{exp_id}/#{@run_id}"
+		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_id.slice(0,3)}/#{exp_id.slice(0,6)}/#{exp_id}/#{@run_id}"
 	end
 	
 	def get_sra(location)
-		puts "getting file from #{location}"
-		log = "#{@path["log"]}/lftp_#{@run_id}_#{@time}.log"
+		log = "./log/lftp_#{@run_id}_#{@time}.log"
 		`lftp -c "open #{location} && get #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
 	
 	def fastqc
-		log = "#{@path["log"]}/fastqc_#{@run_id}_#{@time}.log"
+		log = "./log/fastqc_#{@run_id}_#{@time}.log"
 		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
 	
 	def lftp_failed?
-		log = Dir.glob("#{@path["log"]}/lftp_#{@run_id}*.log}").sort.last
+		log = Dir.glob("./lftp_#{@run_id}*.log}").sort.last
 		(log && open(log).read =~ /fail/)
 	end
 end
 
 class ReportTwitter
 	def initialize
-		tw_conf = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["twitter"]
-		Twitter.configure do |config|
-			config.consumer_key = tw_conf["consumer_key"]
-			config.consumer_secret = tw_conf["consumer_secret"]
-			config.oauth_token = tw_conf["oauth_token"]
-			config.oauth_token_secret = tw_conf["oauth_token_secret"]
-		end
 		@tw = Twitter::Client.new
 		@time = Time.now.strftime("%m/%d %H:%M:%S")
 	end
@@ -172,7 +165,6 @@ if __FILE__ == $0
 			record = SRAID.find_by_runid(runid)			
 			record.status = "ongoing"
 			record.save
-			puts record.to_s		
 		end
 		
 		# waiting for lftp sessions to finish
@@ -183,7 +175,6 @@ if __FILE__ == $0
 				record = SRAID.find_by_runid(runid)
 				record.status = "missing"
 				record.save
-				puts record.to_s
 			end
 		end
 
@@ -222,6 +213,7 @@ if __FILE__ == $0
 		m = Monitoring.new
 	
 		puts "number of task: #{m.task.length}"
+		puts "available: #{m.available.length}"
 		puts "ongoing: #{m.ongoing.uniq.length}"
 		puts "missing: #{m.missing.length}"
 		puts "reported: #{m.reported.length}"
