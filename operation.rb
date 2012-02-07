@@ -71,6 +71,10 @@ class Monitoring
 	def ongoing
 		SRAID.where( :status => "ongoing" ).map{|r| r.runid }
 	end
+	
+	def reported
+		SRAID.where( :status => "reported" ).map{|r r.runid }
+	end
 end
 
 class Operation
@@ -213,14 +217,17 @@ if __FILE__ == $0
 			record.status = "reported"
 			record.save
 		end
-				
+		
 	elsif ARGV.first == "--debug"
 		m = Monitoring.new
 	
 		puts "number of task: #{m.task.length}"
 		puts "ongoing: #{m.ongoing.uniq.length}"
 		puts "missing: #{m.missing.length}"
+		puts "reported: #{m.reported.length}"
 		
+	elsif ARGV.first == "--cleaning"
+		m = Monitoring.new
 		m.ongoing.each do |id|
 			log = Dir.glob("./log/lftp_#{id}*").sort.last
 			puts open(log).read
