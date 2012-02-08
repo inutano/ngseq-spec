@@ -32,6 +32,10 @@ class Monitoring
 		@path = YAML.load_file("./lib/config.yaml")["path"]
 	end
 	
+	def all
+		SRAID.all
+	end
+		
 	def task
 		SRAID.where( :status => "available" ).order("paper DESC, runid ASC").map{|r| r.runid }
 	end
@@ -196,7 +200,7 @@ if __FILE__ == $0
 		r = ReportTwitter.new
 		m = Monitoring.new
 		r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
-		r.report_job(SRAID.all, m.done, m.ongoing)
+		r.report_job(m.all, m.done, m.ongoing)
 		
 	elsif ARGV.first == "--errorreport"
 		r = ReportTwitter.new
