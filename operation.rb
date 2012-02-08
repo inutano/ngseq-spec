@@ -84,6 +84,7 @@ end
 class Operation
 	def initialize(run_id)
 		@run_id = run_id
+		@path = YAML.load_file("./lib/config.yaml")["path"]
 		@time = Time.now.strftime("%m%d%H%M%S")
 	end
 	
@@ -93,17 +94,17 @@ class Operation
 	end
 	
 	def get_sra(location)
-		log = "./log/lftp_#{@run_id}_#{@time}.log"
+		log = @path["log"] + "/lftp_#{@run_id}_#{@time}.log"
 		`lftp -c "open #{location} && get #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
 	
 	def fastqc
-		log = "./log/fastqc_#{@run_id}_#{@time}.log"
+		log = @path["log"] + "/fastqc_#{@run_id}_#{@time}.log"
 		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
 	
 	def lftp_failed?
-		log = Dir.glob("./lftp_#{@run_id}*.log}").sort.last
+		log = Dir.glob(@path["log"] + "/lftp_#{@run_id}*.log").sort.last
 		(log && open(log).read =~ /fail/)
 	end
 end
