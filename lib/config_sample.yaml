@@ -1,0 +1,16 @@
+# sample config.yaml for operation.rb
+
+path:
+  lib: /path/to/projectdir/lib
+  data: /path/to/projectdir/data
+  log: /path/to/projectdir/log
+  result: /path/to/projectdir/result
+  accessions: /path/to/projectdir/lib/SRA_Accessions.tab
+  run_members: /path/to/projectdir/SRA_Run_Members.tab
+  fastqc: /path/to/projectdir/lib/fastqc.sh
+
+twitter:
+  consumer_key: <consumer key>
+  consumer_secret: <consumer secret>
+  oauth_token: <oauth token>
+  oauth_token_secret: <oauth token secret>
