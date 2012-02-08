@@ -6,14 +6,17 @@ require "twitter"
 require "active_record"
 require "logger"
 
+config = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")
+path = config["path"]
+tw_conf = config["twitter"]
+
 ActiveRecord::Base.establish_connection(
 	:adapter => "sqlite3",
-	:database => "./lib/production.sqlite3"
+	:database => "#{path}/production.sqlite3"
 )
 
-ActiveRecord::Base.logger = Logger.new("./log/database.log")
+ActiveRecord::Base.logger = Logger.new("#{path}/database.log")
 
-tw_conf = YAML.load_file("./lib/config.yaml")["twitter"]
 Twitter.configure do |config|
 	config.consumer_key = tw_conf["consumer_key"]
 	config.consumer_secret = tw_conf["consumer_secret"]
@@ -29,7 +32,7 @@ end
 
 class Monitoring
 	def initialize
-		@path = YAML.load_file("./lib/config.yaml")["path"]
+		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 	end
 	
 	def all
@@ -88,7 +91,7 @@ end
 class Operation
 	def initialize(run_id)
 		@run_id = run_id
-		@path = YAML.load_file("./lib/config.yaml")["path"]
+		@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 		@time = Time.now.strftime("%m%d%H%M%S")
 	end
 	
@@ -226,7 +229,7 @@ if __FILE__ == $0
 	elsif ARGV.first == "--cleaning"
 		m = Monitoring.new
 		m.ongoing.each do |id|
-			log = Dir.glob("./log/lftp_#{id}*").sort.last
+			log = Dir.glob("/home/iNut/project/sra_qualitycheck/log/lftp_#{id}*").sort.last
 			puts open(log).read
 			if open(log).read =~ /failed/
 				record = SRAID.find_by_runid(id)
