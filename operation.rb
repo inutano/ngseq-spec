@@ -12,7 +12,7 @@ tw_conf = config["twitter"]
 
 ActiveRecord::Base.establish_connection(
 	:adapter => "sqlite3",
-	:database => "#{path["lib"]}/production.sqlite3"
+	:database => "#{path["lib"]}/production.sqlite3",
 	:timeout => 10000
 )
 
