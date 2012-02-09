@@ -13,6 +13,7 @@ tw_conf = config["twitter"]
 ActiveRecord::Base.establish_connection(
 	:adapter => "sqlite3",
 	:database => "#{path["lib"]}/production.sqlite3"
+	:timeout => 10000
 )
 
 ActiveRecord::Base.logger = Logger.new("#{path["log"]}/database.log")
@@ -63,6 +64,10 @@ class Monitoring
 		SRAID.where( :status => "ongoing" ).map{|r| r.runid }
 	end
 	
+	def downloaded
+		SRAID.where( :status => "downloaded" ).map{|r| r.runid }
+	end
+	
 	def missing
 		SRAID.where( :status => "missing" ).map{|r| r.runid }
 	end
@@ -71,10 +76,6 @@ class Monitoring
 		SRAID.where( :status => "reported" ).map{|r| r.runid }
 	end
 	
-	def compressed
-		Dir.entries(@path["data"]).select{|fname| fname =~ /sra$/ }
-	end
-		
 	def diskusage
 		`df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4].to_i
 	end
@@ -159,70 +160,92 @@ end
 
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
-		m = Monitoring.new
-		task = m.task
-		threads = []
-		executed_id = []
-		while m.diskusage <= 60 && m.ftpsession <= 24
-			runid = task.shift
-			executed_id.push(runid)
-			op = Operation.new(runid)
-			loc = op.ftp_location
-			th = Thread.fork{ op.get_sra(loc) }
-			threads << th
-		end
-		
-		executed_id.each do |runid|
-			record = SRAID.find_by_runid(runid)	
-			record.status = "ongoing"
-			record.save
-		end
-		
-		# waiting for lftp sessions to finish
-		threads.each{|th| th.join }
-
-		executed_id.each do |runid|
-			if Operation.new(runid).lftp_failed?
-				record = SRAID.find_by_runid(runid)
-				record.status = "missing"
-				record.save
+		loop do
+			m = Monitoring.new
+			task = m.task
+			threads = []
+			executed_id = []
+			while m.diskusage <= 60 && m.ftpsession <= 24
+				runid = task.shift
+				executed_id.push(runid)
+				op = Operation.new(runid)
+				loc = op.ftp_location
+				th = Thread.fork{ op.get_sra(loc) }
+				threads << th
 			end
+			
+			executed_id.each do |runid|
+				record = SRAID.find_by_runid(runid)	
+				record.status = "ongoing"
+				record.save
+				pus "transmission ongoing: #{record.to_s}"
+			end
+			
+			threads.each{|th| th.join }
+			
+			executed_id.each do |runid|
+				record = SRAID.find_by_runid(runid)
+				if Operation.new(runid).lftp_failed?
+					record.status = "missing"
+					record.save
+					puts "file missing: #{record.to_s}"
+				else
+					record.status = "downloaded"
+					record.save
+					puts "file downloaded: #{record.to_s}"
+				end
+			end
+			
+			sleep 300
 		end
 
 	elsif ARGV.first == "--fastqc"
-		m = Monitoring.new
-		litesra = m.compressed
-		while m.diskusage <= 60 && !litesra.empty?
-			runid = litesra.shift.gsub(".lite.sra","")
-			op = Operation.new(runid)
-			op.fastqc
-			
-			record = SRAID.find_by_runid(runid)
-			record.status = "done"
-			record.save
+		loop do
+			m = Monitoring.new
+			downloaded = m.downloaded
+			while m.diskusage <= 60 && !downloaded.empty?
+				runid = downloaded.shift
+				op = Operation.new(runid)
+				op.fastqc
+				
+				record = SRAID.find_by_runid(runid)
+				record.status = "done"
+				record.save
+				puts "fastqc submitted: #{record.to_s}"
+			end
+			sleep 600
 		end
 	
 	elsif ARGV.first == "--report"
-		r = ReportTwitter.new
-		m = Monitoring.new
-		r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
-		r.report_job(m.all, m.done, m.ongoing)
+		loop do
+			r = ReportTwitter.new
+			m = Monitoring.new
+			r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
+			r.report_job(m.all, m.done, m.ongoing)
+			puts "reported on Twitter: #{Time.now}"
+			sleep 1200
+		end
 		
 	elsif ARGV.first == "--errorreport"
-		r = ReportTwitter.new
-		m = Monitoring.new
-		missing_list = m.missing
-		r.report_error(missing_list)
+		loop do
+			r = ReportTwitter.new
+			m = Monitoring.new
+			missing_list = m.missing
+			r.report_error(missing_list)
 		
-		missing_list.each do |runid|
-			record = SRAID.find_by_runid(runid)
-			record.status = "reported"
-			record.save
+			missing_list.each do |runid|
+				record = SRAID.find_by_runid(runid)
+				record.status = "reported"
+				record.save
+				puts "error reported: #{record.to_s}"
+			end
+			
+			sleep 1800
 		end
 		
 	elsif ARGV.first == "--debug"
 		m = Monitoring.new
-	
+		
 		puts "number of task: #{m.task.length}"
 		puts "available: #{m.available.length}"
 		puts "ongoing: #{m.ongoing.uniq.length}"
