@@ -12,10 +12,10 @@ tw_conf = config["twitter"]
 
 ActiveRecord::Base.establish_connection(
 	:adapter => "sqlite3",
-	:database => "#{path}/production.sqlite3"
+	:database => "#{path["lib"]}/production.sqlite3"
 )
 
-ActiveRecord::Base.logger = Logger.new("#{path}/database.log")
+ActiveRecord::Base.logger = Logger.new("#{path["log"]}/database.log")
 
 Twitter.configure do |config|
 	config.consumer_key = tw_conf["consumer_key"]
@@ -160,7 +160,7 @@ if __FILE__ == $0
 		task = m.task
 		threads = []
 		executed_id = []
-		while m.diskusage <= 60 && m.ftpsession <= 12
+		while m.diskusage <= 60 && m.ftpsession <= 24
 			runid = task.shift
 			executed_id.push(runid)
 			op = Operation.new(runid)
@@ -170,7 +170,7 @@ if __FILE__ == $0
 		end
 		
 		executed_id.each do |runid|
-			record = SRAID.find_by_runid(runid)			
+			record = SRAID.find_by_runid(runid)	
 			record.status = "ongoing"
 			record.save
 		end
