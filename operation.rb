@@ -96,9 +96,6 @@ class Operation
 		@time = Time.now.strftime("%m%d%H%M%S")
 	end
 	
-	attr_reader :run_id
-	attr_reader :path
-	
 	def ftp_location
 		exp_id = open(@path["run_members"]).readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
 		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_id.slice(0,3)}/#{exp_id.slice(0,6)}/#{exp_id}/#{@run_id}"
@@ -245,25 +242,11 @@ if __FILE__ == $0
 		
 	elsif ARGV.first == "--debug"
 		m = Monitoring.new
-		
 		puts "number of task: #{m.task.length}"
 		puts "available: #{m.available.length}"
 		puts "ongoing: #{m.ongoing.uniq.length}"
+		puts "downloaded: #{m.downloaded.length}"
 		puts "missing: #{m.missing.length}"
 		puts "reported: #{m.reported.length}"
-		
-	elsif ARGV.first == "--cleaning"
-		m = Monitoring.new
-		m.ongoing.each do |id|
-			log = Dir.glob("/home/iNut/project/sra_qualitycheck/log/lftp_#{id}*").sort.last
-			puts open(log).read
-			if open(log).read =~ /failed/
-				record = SRAID.find_by_runid(id)
-				puts record.to_s
-				record.status = "missing"
-				record.save
-				puts record.to_s
-			end
-		end
 	end
 end
