@@ -95,6 +95,9 @@ class Operation
 		@time = Time.now.strftime("%m%d%H%M%S")
 	end
 	
+	attr_reader :run_id
+	attr_reader :path
+	
 	def ftp_location
 		exp_id = open(@path["run_members"]).readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
 		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_id.slice(0,3)}/#{exp_id.slice(0,6)}/#{exp_id}/#{@run_id}"
@@ -107,7 +110,7 @@ class Operation
 	
 	def fastqc
 		log = @path["log"] + "/fastqc_#{@run_id}_#{@time}.log"
-		`qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
+		`/usr/local/gridengine/bin/lx24-amd64/qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
 	
 	def lftp_failed?
