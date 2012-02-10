@@ -193,7 +193,7 @@ if __FILE__ == $0
 				end
 			end
 			
-			sleep 300
+			sleep 180
 		end
 
 	elsif ARGV.first == "--fastqc"
