@@ -175,7 +175,7 @@ if __FILE__ == $0
 				record = SRAID.find_by_runid(runid)	
 				record.status = "ongoing"
 				record.save
-				pus "transmission ongoing: #{record.to_s}"
+				puts "transmission ongoing: #{record.to_s}"
 			end
 			
 			threads.each{|th| th.join }
