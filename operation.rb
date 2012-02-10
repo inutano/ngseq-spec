@@ -220,7 +220,7 @@ if __FILE__ == $0
 			r.report_stat(m.diskusage, m.ftpsession, m.jobsubmitted)
 			r.report_job(m.all, m.done, m.ongoing)
 			puts "reported on Twitter: #{Time.now}"
-			sleep 1200
+			sleep 1800
 		end
 		
 	elsif ARGV.first == "--errorreport"
