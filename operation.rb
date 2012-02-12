@@ -158,6 +158,7 @@ end
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
 		loop do
+			puts Time.now
 			m = Monitoring.new
 			task = m.task
 			threads = []
@@ -193,11 +194,12 @@ if __FILE__ == $0
 				end
 			end
 			
-			sleep 180
+			sleep 300
 		end
 
 	elsif ARGV.first == "--fastqc"
 		loop do
+			puts Time.now
 			m = Monitoring.new
 			downloaded = m.downloaded
 			while m.diskusage <= 60 && !downloaded.empty?
