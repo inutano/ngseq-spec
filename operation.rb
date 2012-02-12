@@ -96,8 +96,8 @@ class Operation
 		@time = Time.now.strftime("%m%d%H%M%S")
 	end
 	
-	def ftp_location
-		exp_id = open(@path["run_members"]).readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
+	def ftp_location(run_members)
+		exp_id = run_members.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
 		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_id.slice(0,3)}/#{exp_id.slice(0,6)}/#{exp_id}/#{@run_id}"
 	end
 	
@@ -157,6 +157,7 @@ end
 
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
+		run_members = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Run_Members.tab").readlines
 		loop do
 			puts Time.now
 			m = Monitoring.new
@@ -167,7 +168,7 @@ if __FILE__ == $0
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
-				loc = op.ftp_location
+				loc = op.ftp_location(run_members)
 				th = Thread.fork{ op.get_sra(loc) }
 				threads << th
 			end
