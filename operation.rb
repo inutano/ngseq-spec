@@ -163,7 +163,7 @@ if __FILE__ == $0
 			task = m.task
 			threads = []
 			executed_id = []
-			while m.diskusage <= 60 && m.ftpsession <= 24
+			while m.diskusage <= 60 && m.ftpsession <= 16
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
