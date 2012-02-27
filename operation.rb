@@ -96,15 +96,9 @@ class Operation
 		@time = Time.now.strftime("%m%d%H%M%S")
 	end
 	
-	def ftp_location
-		exp_id = open(@path["run_members"]).readlines.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
-		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_id.slice(0,3)}/#{exp_id.slice(0,6)}/#{exp_id}/#{@run_id}"
-	end
-	
-	def ftp_location_fq(accessions, run_members)
-		sub_id = accessions.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[1]
+	def ftp_location(run_members)
 		exp_id = run_members.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
-		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{sub_id.slice(0,6)}/#{sub_id}/#{exp_id}"
+		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/sralite/ByExp/litesra/#{exp_id.slice(0,3)}/#{exp_id.slice(0,6)}/#{exp_id}/#{@run_id}"
 	end
 	
 	def get_sra(location)
@@ -112,19 +106,9 @@ class Operation
 		`lftp -c "open #{location} && get #{@run_id}.lite.sra -o #{@path["data"]}" >& #{log}`
 	end
 	
-	def get_fq(location)
-		log = @path["log"] + "/lftp_#{@run_id}_#{@time}.log"
-		`lftp -c "open #{location} && mget -O #{@path["data"]}" ./* >& #{log}`
-	end
-	
 	def fastqc
 		log = @path["log"] + "/fastqc_#{@run_id}_#{@time}.log"
-		`/usr/local/gridengine/bin/lx24-amd64/qsub -o #{log} #{@path["lib"]}/fastqc.sh --sra #{@run_id}`
-	end
-
-	def fastqc_fq
-		log = @path["log"] + "/fastqc_#{@run_id}_#{@time}.log"
-		`/usr/local/gridengine/bin/lx24-amd64/qsub -o #{log} #{@path["lib"]}/fastqc.sh --fq #{@run_id}`
+		`/usr/local/gridengine/bin/lx24-amd64/qsub -o #{log} #{@path["lib"]}/fastqc.sh #{@run_id}`
 	end
 	
 	def lftp_failed?
@@ -173,6 +157,7 @@ end
 
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
+		run_members = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Run_Members.tab").readlines
 		loop do
 			puts Time.now
 			m = Monitoring.new
@@ -183,10 +168,8 @@ if __FILE__ == $0
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
-				loc = op.ftp_location
+				loc = op.ftp_location(run_members)
 				th = Thread.fork{ op.get_sra(loc) }
-				#loc = op.ftp_location_fq(accessions, run_members)
-				#th = Thread.fork{ op.get_fq(loc) }
 				threads << th
 			end
 			
@@ -223,8 +206,7 @@ if __FILE__ == $0
 			while m.diskusage <= 60 && !downloaded.empty?
 				runid = downloaded.shift
 				op = Operation.new(runid)
-				#op.fastqc
-				op.fastqc_fq
+				op.fastqc
 				
 				record = SRAID.find_by_runid(runid)
 				record.status = "done"
