@@ -104,7 +104,7 @@ class Operation
 	def ftp_location_fq(accessions, run_members)
 		sub_id = accessions.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[1]
 		exp_id = run_members.select{|l| l =~ /^#{@run_id}/}.join.split("\t")[2]
-		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{sub_id.slice(0,3)}/#{sub_id}/#{exp_id}"
+		"ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{sub_id.slice(0,6)}/#{sub_id}/#{exp_id}"
 	end
 	
 	def get_sra(location)
@@ -174,7 +174,7 @@ end
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
 		run_members = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Run_Members.tab").readlines
-		accessions = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Accessions.tab").readlines
+		#accessions = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Accessions.tab").readlines
 		loop do
 			puts Time.now
 			m = Monitoring.new
@@ -185,10 +185,10 @@ if __FILE__ == $0
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
-				#loc = op.ftp_location(run_members) # .lite.sra mode
-				#th = Thread.fork{ op.get_sra(loc) }
-				loc = op.ftp_location_fq(accessions, run_members)
-				th = Thread.fork{ op.get_fq(loc) }
+				loc = op.ftp_location(run_members) # .lite.sra mode
+				th = Thread.fork{ op.get_sra(loc) }
+				#loc = op.ftp_location_fq(accessions, run_members)
+				#th = Thread.fork{ op.get_fq(loc) }
 				threads << th
 			end
 			
