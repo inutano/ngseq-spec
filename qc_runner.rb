@@ -9,9 +9,7 @@ require "./lib/sraid"
 require "./lib/qc_process"
 require "./lib/report_tw"
 
-yaml = YAML.load_file("./lib/config.yaml")
-path = yaml["path"]
-tw_conf = yaml["path"]
+path = YAML.load_file("./lib/config.yaml")["path"]
 
 ActiveRecord::Base.establish_connection(
   :adapter => "sqlite3",
@@ -20,13 +18,6 @@ ActiveRecord::Base.establish_connection(
 )
 
 ActiveRecord::Base.logger = Logger.new(path["log"] + "/database.log")
-
-Twitter.configure do |config|
-  config.consumer_key = tw_conf["consumer_key"]
-  config.consumer_secret = tw_conf["consumer_secret"]
-  config.oauth_token = tw_conf["oauth_token"]
-  config.oauth_token_secret = tw_conf["oauth_token_secret"]
-end
 
 if __FILE__ == $0
   if ARGV.first == "--transmit"
@@ -95,7 +86,7 @@ if __FILE__ == $0
         record.status = "reported"
         record.save
       end
+      sleep 1800
     end
-    sleep 1800
   end
 end
