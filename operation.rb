@@ -194,8 +194,6 @@ if __FILE__ == $0
 					puts "file downloaded: #{record.to_s}"
 				end
 			end
-			
-			sleep 300
 		end
 
 	elsif ARGV.first == "--fastqc"
