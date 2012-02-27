@@ -1,6 +1,16 @@
 # -*- coding: utf-8 -*-
 
+require "yaml"
 require "twitter"
+
+tw_conf = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["twitter"]
+
+Twitter.configure do |config|
+  config.consumer_key = tw_conf["consumer_key"]
+  config.consumer_secret = tw_conf["consumer_secret"]
+  config.oauth_token = tw_conf["oauth_token"]
+  config.oauth_token_secret = tw_conf["oauth_token_secret"]
+end
 
 class ReportTwitter
   @@tw = Twitter::Client.new
@@ -11,7 +21,7 @@ class ReportTwitter
     job = `qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
     message = <<-MESSAGIO.gsub(/^\s*/,"")
       @null #{Time.now.strftime("%m/%d %H:%M:%S")}
-      disk usage: #{usage}%
+      disk usage: #{usage}
       #{session} ftp sessions
       #{job} job submitted
     MESSAGIO
