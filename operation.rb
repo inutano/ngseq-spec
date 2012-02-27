@@ -173,11 +173,7 @@ end
 
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
-<<<<<<< HEAD
 		run_members = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Run_Members.tab").readlines
-		#accessions = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Accessions.tab").readlines
-=======
->>>>>>> parent of 4b2ca92... fixed a part to read SRA_Run_Members.tab only once before loop process
 		loop do
 			puts Time.now
 			m = Monitoring.new
@@ -188,11 +184,7 @@ if __FILE__ == $0
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
-<<<<<<< HEAD
 				loc = op.ftp_location(run_members) # .lite.sra mode
-=======
-				loc = op.ftp_location
->>>>>>> parent of 4b2ca92... fixed a part to read SRA_Run_Members.tab only once before loop process
 				th = Thread.fork{ op.get_sra(loc) }
 				#loc = op.ftp_location_fq(accessions, run_members)
 				#th = Thread.fork{ op.get_fq(loc) }
