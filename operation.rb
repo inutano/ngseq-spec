@@ -183,7 +183,7 @@ if __FILE__ == $0
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
-				loc = op.ftp_location(run_members)
+				loc = op.ftp_location
 				th = Thread.fork{ op.get_sra(loc) }
 				#loc = op.ftp_location_fq(accessions, run_members)
 				#th = Thread.fork{ op.get_fq(loc) }
