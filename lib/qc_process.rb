@@ -6,17 +6,23 @@ class QCprocess
   @@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 
   def initialize(runid)
-    accessions = @@path["lib"] + "/SRA_Accessions.tab"
-    run_members = @@path["lib"] + "/SRA_Run_Members.tab"
     @runid = runid
-    @subid = open(accessions).readlines.select{|l| l =~ /^#{runid}/}.join.split("\t")[1]
-    @expid = open(run_members).readlines.select{|l| l =~ /^#{runid}/}.join.split("\t")[2]
   end
   
-  def get_fq
-    location = "ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{@subid.slice(0,6)}/#{@subid}/#{@expid}"
+  def ftp_location(accessions, run_members)
+    @subid = accessions.select{|l| l =~ /^#{runid}/}.join.split("\t")[1]
+    @expid = run_members.readlines.select{|l| l =~ /^#{runid}/}.join.split("\t")[2]
+    "ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{@subid.slice(0,6)}/#{@subid}/#{@expid}"
+  end
+  
+  def get_fq(location)
     log = @@path["log"] + "/lftp_#{@runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
     `lftp -c "open #{location} && mget -O #{@@path["data"]} * " >& #{log}`
+  end
+  
+  def ftp_failed?
+    log = Dir.glob(@@path["log"] + "/lftp_#{@run_id}*.log").sort.last
+    (log && open(log).read =~ /fail/)
   end
 
   def fastqc
