@@ -7,11 +7,11 @@ require "twitter"
 
 require "./lib/sraid"
 require "./lib/qc_process"
-require "./report_tw"
+require "./lib/report_tw"
 
 yaml = YAML.load_file("./lib/config.yaml")
 path = yaml["path"]
-tw_conf = yaml{"path"}
+tw_conf = yaml["path"]
 
 ActiveRecord::Base.establish_connection(
   :adapter => "sqlite3",
@@ -30,12 +30,15 @@ end
 
 if __FILE__ == $0
   if ARGV.first == "--transmit"
+    puts "reading id convert table.."
     accessions = open(path["lib"] + "/SRA_Accessions.tab").readlines
     run_members = open(path["lib"] + "/SRA_Run_Members.tab").readlines
-    puts Time.now
     loop do
-      available = SRAID.available
+      puts "transmittion start #{Time.now}"
+      available = SRAID.available.map{|r| r.runid }
       executed = []
+      diskusage = `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4].to_i
+      session = `ps aux`.split("\n").select{|l| l =~ /lftp/ }.length
       while diskusage <= 60 && session <= 8
         runid = available.shift
         qcp = QCprocess.new(runid)
@@ -56,14 +59,14 @@ if __FILE__ == $0
           record.save
         end
       end
-      puts "sleep 1min: #{Time.now}"
-      sleep 60
+      puts "sleep 3min: #{Time.now}"
+      sleep 180
     end
   
   elsif ARGV.first == "--fastqc"
     puts Time.now
     loop do
-      downloaded = SRAID.downloaded
+      downloaded = SRAID.downloaded.map{|r| r.runid }
       while diskusage <= 60 && !downloaded.empty?
         runid = downloaded.shift
         qcp = QCprocess.new(runid)
