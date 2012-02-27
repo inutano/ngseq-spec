@@ -18,10 +18,11 @@ class ReportTwitter
     @@tw.update(message)
   end
 	
-  def self.job(done, all)
+  def self.job(done, available, all)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
       @null #{Time.now.strftime("%m/%d %H:%M:%S")}
       #{done.length} of runs finished,
+      #{available.length} of runs ahead.
       #{(done.length.to_f / all.length) * 100}%
     MESSAGIO
     @@tw.update(message)
