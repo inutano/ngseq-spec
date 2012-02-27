@@ -173,7 +173,6 @@ end
 
 if __FILE__ == $0
 	if ARGV.first == "--transmit"
-		run_members = open("/home/iNut/project/sra_qualitycheck/lib/SRA_Run_Members.tab").readlines
 		loop do
 			puts Time.now
 			m = Monitoring.new
@@ -184,7 +183,7 @@ if __FILE__ == $0
 				runid = task.shift
 				executed_id.push(runid)
 				op = Operation.new(runid)
-				loc = op.ftp_location(run_members) # .lite.sra mode
+				loc = op.ftp_location(run_members)
 				th = Thread.fork{ op.get_sra(loc) }
 				#loc = op.ftp_location_fq(accessions, run_members)
 				#th = Thread.fork{ op.get_fq(loc) }
