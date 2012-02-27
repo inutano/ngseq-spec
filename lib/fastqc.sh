@@ -1,7 +1,7 @@
 #!/home/iNut/local/bin/zsh
 #$ -j y
 
-id=$1
+id=$2
 data_location="/home/iNut/project/sra_qualitycheck/data"
 file_path="${data_location}/${id}.lite.sra"
 result_dir="/home/iNut/project/sra_qualitycheck/result/${id}"
@@ -11,4 +11,7 @@ fastqc_command="/home/iNut/local/bin/fastqc/fastqc --noextract --threads 8 --out
 cleaning_command="rm -rf ${data_location}/${id}*"
 
 mkdir ${result_dir}
-${fastq_dump_command} && ${fastqc_command} && ${cleaning_command}
+case "$1" in
+  "--sra" ) ${fastq_dump_command} && ${fastqc_command} && ${cleaning_command}
+  "--fq" ) ${fastqc_command} && ${cleaning_command}
+esac
