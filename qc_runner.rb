@@ -37,7 +37,7 @@ if __FILE__ == $0
         Thread.fork do
           qcp.gwt_fq(location)
           record = SRAID.find_by_runid(runid)
-          record.status = "downloaded"
+          record.status = "processing"
           record.save
           puts record.to_s
         end
@@ -47,6 +47,10 @@ if __FILE__ == $0
         if (log && open(log).read =~ /fail/)
           record = SRAID.find_by_runid(runid)
           record.status = "missing"
+          record.save
+        else
+          record = SRAID.find_by_runid(runid)
+          record.status = "downloaded"
           record.save
         end
       end
