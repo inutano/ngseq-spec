@@ -10,8 +10,8 @@ class QCprocess
   end
   
   def ftp_location(accessions, run_members)
-    @subid = accessions.select{|l| l =~ /^#{runid}/}.join.split("\t")[1]
-    @expid = run_members.readlines.select{|l| l =~ /^#{runid}/}.join.split("\t")[2]
+    @subid = accessions.select{|l| l =~ /^#{@runid}/}.join.split("\t")[1]
+    @expid = run_members.select{|l| l =~ /^#{@runid}/}.join.split("\t")[2]
     "ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{@subid.slice(0,6)}/#{@subid}/#{@expid}"
   end
   
