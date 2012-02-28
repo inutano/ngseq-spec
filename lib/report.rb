@@ -12,13 +12,24 @@ Twitter.configure do |config|
   config.oauth_token_secret = tw_conf["oauth_token_secret"]
 end
 
+class ReportConfig
+  def self.diskusage
+    `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4]
+  end
+  
+  def self.ftpsession
+    `ps aux`.split("\n").select{|l| l =~ /lftp/ }.length / 2
+  end
+  
+  def self.qstat
+    `qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
+  end
+end
+
 class ReportTwitter
   @@tw = Twitter::Client.new
   
-  def self.stat
-    usage = `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4]
-    session = `ps aux`.split("\n").select{|l| l =~ /lftp/ }.length / 2
-    job = `qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
+  def self.stat(usage, session, job)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
       @null #{Time.now.strftime("%m/%d %H:%M:%S")}
       disk usage: #{usage}
