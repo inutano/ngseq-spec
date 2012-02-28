@@ -27,8 +27,8 @@ if __FILE__ == $0
     loop do
       puts "transmittion start #{Time.now}"
       available = SRAID.available.map{|r| r.runid }
-      diskusage = `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4].to_i
-      session = `ps aux`.split("\n").select{|l| l =~ /lftp/ }.length
+      diskusage = ReportStat.diskusage.to_i
+      session = ReportStat.ftpsession
       while diskusage <= 60 && session <= 8
         runid = available.shift
         qcp = QCprocess.new(runid)
@@ -73,11 +73,14 @@ if __FILE__ == $0
   
   elsif ARGV.first == "--report"
     loop do
+      diskusage = ReportStat.diskusage
+      ftpsession = ReportStat.ftpsession
+      qstat = ReportStat.qstat
       done = SRAID.done
       available = SRAID.available
       all = SRAID.all
       missyou = SRAID.missing.map{|r| r.runid }
-      ReportTwitter.stat
+      ReportTwitter.stat(diskusage, ftpsession, qstat)
       ReportTwitter.job(done, available, all)
       ReportTwitter.error(missyou)
       missyou.each do |runid|
@@ -85,6 +88,7 @@ if __FILE__ == $0
         record.status = "reported"
         record.save
       end
+      puts "sleep 30min: #{Time.now}"
       sleep 1800
     end
   end

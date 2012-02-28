@@ -12,7 +12,7 @@ Twitter.configure do |config|
   config.oauth_token_secret = tw_conf["oauth_token_secret"]
 end
 
-class ReportConfig
+class ReportStat
   def self.diskusage
     `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4]
   end
@@ -29,16 +29,16 @@ end
 class ReportTwitter
   @@tw = Twitter::Client.new
   
-  def self.stat(usage, session, job)
+  def self.stat(diskusage, ftpsession, qstat)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
       @null #{Time.now.strftime("%m/%d %H:%M:%S")}
-      disk usage: #{usage}
-      #{session} ftp sessions
-      #{job} job submitted
+      disk usage: #{diskusage}
+      #{ftpsession} ftp sessions
+      #{qstat} job submitted
     MESSAGIO
     @@tw.update(message)
   end
-	
+  
   def self.job(done, available, all)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
       @null #{Time.now.strftime("%m/%d %H:%M:%S")}
@@ -48,7 +48,7 @@ class ReportTwitter
     MESSAGIO
     @@tw.update(message)
   end
-	
+  	
   def self.error(missing)
     missing.join(",").scan(/.{100}/).each do |list|
       message = <<-MESSAGIO.gsub(/^\s*/,"")
