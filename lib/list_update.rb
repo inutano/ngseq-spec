@@ -89,16 +89,14 @@ if __FILE__ == $0
   
   puts "search submission, project, experiment ID and put them into DB #{Time.now}"
   SRAID.all.each do |record|
-    if !record.subid
-      runid = record.runid
-      acc = accessions.select{|line| line =~ /^#{runid}/ }.join.split("\t")
-      record.subid = acc[1]
-      record.studyid = acc[12]
-      record.expid = acc[10]
-      record.sampleid = acc[11]
-      record.save
-      puts "record for #{record.runid}: #{record.subid}, #{record.studyid}, #{record.expid}, #{record.sampleid}"
-    end
+    runid = record.runid
+    acc = accessions.select{|line| line =~ /^#{runid}/ }.join.split("\t")
+    record.subid = acc[1]
+    record.studyid = acc[12]
+    record.expid = acc[10]
+    record.sampleid = acc[11]
+    record.save
+    puts "record for #{record.runid}: #{record.subid}, #{record.studyid}, #{record.expid}, #{record.sampleid}"
   end
   
   puts "mark already calcurated items as done #{Time.now}"
