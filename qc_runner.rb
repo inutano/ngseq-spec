@@ -21,28 +21,21 @@ ActiveRecord::Base.logger = Logger.new(path["log"] + "/database.log")
 
 if __FILE__ == $0
   if ARGV.first == "--transmit"
-    puts "reading id convert table.."
-    accessions = open(path["lib"] + "/SRA_Accessions.tab").readlines
-    run_members = open(path["lib"] + "/SRA_Run_Members.tab").readlines
     loop do
-      puts "transmittion start #{Time.now}"
-      available = SRAID.available.map{|r| r.runid }
+      puts "begin transmission #{Time.now}"
+      available = SRAID.available
       diskusage = ReportStat.diskusage.to_i
       session = ReportStat.ftpsession
       while diskusage <= 60 && session <= 8
-        runid = available.shift
-        qcp = QCprocess.new(runid)
-        location = qcp.ftp_location(accessions, run_members)
+        record = available.shift
+        qcp = QCprocess.new(record.runid)
         Thread.fork do
-          qcp.gwt_fq(location)
-          log = Dir.glob(path["log"] + "/lftp_#{@run_id}*.log").sort.last
-            if (log && open(log).read =~ /fail/)
-              record = SRAID.find_by_runid(runid)
+          qcp.get_fq(record.subid, record.expid)
+            if qcp.ftp_failed?
               record.status = "missing"
               record.save
               puts record.to_s
             else
-              record = SRAID.find_by_runid(runid)
               record.status = "downloaded"
               record.save
               puts record.to_s
@@ -54,15 +47,15 @@ if __FILE__ == $0
     end
   
   elsif ARGV.first == "--fastqc"
-    puts Time.now
     loop do
-      downloaded = SRAID.downloaded.map{|r| r.runid }
+      puts "begin fastqc process #{Time.now}"
+      downloaded = SRAID.downloaded
+      diskusage = ReportStat.diskusage.to_i
       while diskusage <= 60 && !downloaded.empty?
-        runid = downloaded.shift
-        qcp = QCprocess.new(runid)
+        record = downloaded.shift
+        qcp = QCprocess.new(record.runid)
         qcp.fastqc
         
-        record = SRAID.find_by_runid(runid)
         record.status = "done"
         record.save
         puts "submit fastqc for " + record.to_s
