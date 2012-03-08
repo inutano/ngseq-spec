@@ -54,47 +54,49 @@ class Update
 end
 
 if __FILE__ == $0
-  # create db file and table if it  does not exist
-  SRAIDsInit.migrate( :up ) if !File.exist?("./production.sqlite3")
+
+  if !File.exist?("./production.sqlite3")
+    puts "start DB migration #{Time.now}"
+    SRAIDsInit.migrate( :up )
+  end
   
-  # preparing list to insert: available on ftp site and not yet recorded on DB
+  puts "updating SRA Accessions list from NCBI #{Time.now}"
   available_on_ftp = Update.accessions.select{|l| l =~ /^.RR/ && l.split("\t")[2] == "live"}
+
+  puts "calcurating items already in DB #{Time.now}"
   already_in_db = SRAID.all.map{|r| r.runid }
+
+  puts "preparing list to insert: available on ftp site and not yet recorded #{Time.now}"
   update_list =  available_on_ftp.delete_if{|l| already_in_db.include?(l.split("\t").first)}
   
-  # for the first time to create DB, devide already done and undone
+  puts "checking if there are existing items in update list #{Time.now}"
   result_dirs = Dir.entries("../result")  
   done = update_list.select{|l| result_dirs.include?(l.split("\t").first)}
   undone = update_list - done
   
+  puts "start inserting records #{Time.now}"
   [done, undone].each do |set|
     SRAID.transaction {
       set.each do |line|
-        runid = line[0]
-        subid = line[1]
-        studyid = line[12]
-        expid = line[10]
-        sampleid = line[11]
+        insert = { :paper => false }
+        insert[ :runid ] = line[0]
+        insert[ :subid ] = line[1]
+        insert[ :studyid ] = line[12]
+        insert[ :expid ] = line[10]
+        insert[ :sampleid ] = line[11]
         if set == done
           status = "done"
         else
           status = "available"
         end
-        
-        SRAID.create (
-          :runid => runid,
-          :subid => subid,
-          :studyid => studyid,
-          :expid => expid,
-          :sampleid => sampleid,
-          :status => status,
-          :paper => false
-        )
+        insert[ :status ] = status
+        SRAID.create(insert)
+        puts "inserted #{insert[:runid] into DB}"
       end
     }
   end
   
-  # update publication info
+  puts "updating publication info #{Time.now}"
   SRAID.transaction {
     Update.paperpublished_subid.each do |subid|
       record = SRAID.find_by_subid(subid)
