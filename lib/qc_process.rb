@@ -5,17 +5,12 @@ require "yaml"
 class QCprocess
   @@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 
-  def initialize(runid)
+  def initialize(runid, subid, expid)
     @runid = runid
   end
   
-  def ftp_location(accessions, run_members)
-    @subid = accessions.select{|l| l =~ /^#{@runid}/}.join.split("\t")[1]
-    @expid = run_members.select{|l| l =~ /^#{@runid}/}.join.split("\t")[2]
-    "ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{@subid.slice(0,6)}/#{@subid}/#{@expid}"
-  end
-  
-  def get_fq(location)
+  def get_fq(subid, expid)
+    location = "ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{subid.slice(0,6)}/#{subid}/#{expid}"
     log = @@path["log"] + "/lftp_#{@runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
     `lftp -c "open #{location} && mget -O #{@@path["data"]} * " >& #{log}`
   end
