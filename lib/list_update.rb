@@ -78,12 +78,13 @@ if __FILE__ == $0
   [done, undone].each do |set|
     SRAID.transaction {
       set.each do |line|
+        arr = line.split("\t")
         insert = { :paper => false }
-        insert[ :runid ] = line[0]
-        insert[ :subid ] = line[1]
-        insert[ :studyid ] = line[12]
-        insert[ :expid ] = line[10]
-        insert[ :sampleid ] = line[11]
+        insert[ :runid ] = arr[0]
+        insert[ :subid ] = arr[1]
+        insert[ :studyid ] = arr[12]
+        insert[ :expid ] = arr[10]
+        insert[ :sampleid ] = arr[11]
         if set == done
           status = "done"
         else
@@ -91,7 +92,7 @@ if __FILE__ == $0
         end
         insert[ :status ] = status
         SRAID.create(insert)
-        puts "inserted #{insert[:runid] into DB}"
+        puts "inserted #{insert[:runid]} into DB"
       end
     }
   end
