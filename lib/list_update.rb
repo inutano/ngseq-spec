@@ -101,8 +101,10 @@ if __FILE__ == $0
   SRAID.transaction {
     Update.paperpublished_subid.each do |subid|
       record = SRAID.find_by_subid(subid)
-      record.paper = true
-      record.save
+      if record
+        record.paper = true
+        record.save
+      end
     end
   }
 end
