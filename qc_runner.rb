@@ -7,7 +7,7 @@ require "twitter"
 
 require "./lib/sraid"
 require "./lib/qc_process"
-require "./lib/report_tw"
+require "./lib/report"
 
 path = YAML.load_file("./lib/config.yaml")["path"]
 
