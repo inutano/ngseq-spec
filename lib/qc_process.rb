@@ -5,7 +5,7 @@ require "yaml"
 class QCprocess
   @@path = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["path"]
 
-  def initialize(runid, subid, expid)
+  def initialize(runid)
     @runid = runid
   end
   
