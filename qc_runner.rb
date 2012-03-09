@@ -24,9 +24,7 @@ if __FILE__ == $0
     loop do
       puts "begin transmission #{Time.now}"
       available = SRAID.available
-      diskusage = ReportStat.diskusage.to_i
-      session = ReportStat.ftpsession
-      while diskusage <= 60 && session <= 8
+      while ReportStat.diskusage.to_i <= 60 && ReportStat.ftpsession <= 8
         record = available.shift
         qcp = QCprocess.new(record.runid)
         Thread.fork do
@@ -50,8 +48,7 @@ if __FILE__ == $0
     loop do
       puts "begin fastqc process #{Time.now}"
       downloaded = SRAID.downloaded
-      diskusage = ReportStat.diskusage.to_i
-      while diskusage <= 60 && !downloaded.empty?
+      while ReportStat.diskusage.to_i <= 60 && !downloaded.empty?
         record = downloaded.shift
         qcp = QCprocess.new(record.runid)
         qcp.fastqc
