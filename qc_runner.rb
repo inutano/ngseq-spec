@@ -24,22 +24,43 @@ if __FILE__ == $0
     loop do
       puts "begin transmission #{Time.now}"
       available = SRAID.available
+      threads = []
+      executed = []
       while ReportStat.diskusage.to_i <= 60 && ReportStat.ftpsession <= 8
         record = available.shift
         qcp = QCprocess.new(record.runid)
-        Thread.fork do
-          qcp.get_fq(record.subid, record.expid)
-            if qcp.ftp_failed?
-              record.status = "missing"
-              record.save
-              puts record.to_s
-            else
-              record.status = "downloaded"
-              record.save
-              puts record.to_s
-            end
+        
+        th = Thread.fork{qcp.get_fq(record.subid, record.expid)}
+        threads << th
+        executed << record.runid
+      end
+      
+      SRAID.transaction do
+        executed.each do |runid|
+          record = SRAID.find_by_runid(runid)
+          record.status = "ongoing"
+          record.save
+          puts record.to_s
         end
       end
+      
+      puts "waiting for forked processes to complete: #{Time.now}"
+      threads.each{|th| th.join }
+      
+      
+      executed.each do |runid|
+        record = SRAID.find_by_runid(runid)
+        if QCprocess.new(runid).ftp_failed?
+          record.status = "missing"
+          record.save
+          puts record.to_s
+        else
+          record.status = "downloaded"
+          record.save
+          puts record.to_s
+        end
+      end
+      
       puts "sleep 3min: #{Time.now}"
       sleep 180
     end

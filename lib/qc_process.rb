@@ -11,12 +11,13 @@ class QCprocess
   
   def get_fq(subid, expid)
     location = "ftp.ddbj.nig.ac.jp/ddbj_database/dra/fastq/#{subid.slice(0,6)}/#{subid}/#{expid}"
+    puts location
     log = @@path["log"] + "/lftp_#{@runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
-    `lftp -c "open #{location} && mget -O #{@@path["data"]} * " >& #{log}`
+    `lftp -c "open #{location} && mget -O #{@@path["data"]} #{@runid}* " >& #{log}`
   end
   
   def ftp_failed?
-    log = Dir.glob(@@path["log"] + "/lftp_#{@run_id}*.log").sort.last
+    log = Dir.glob(@@path["log"] + "/lftp_#{@runid}*.log").sort.last
     (log && open(log).read =~ /fail/)
   end
 
