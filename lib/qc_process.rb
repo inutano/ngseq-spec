@@ -23,6 +23,6 @@ class QCprocess
 
   def fastqc
     log = @@path["log"] + "/fastqc_#{@runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
-    `/usr/local/gridengine/bin/lx24-amd64/qsub -o #{log} #{@@path["lib"]}/fastqc_fq.sh #{@run_id}`
+    `/usr/local/gridengine/bin/lx24-amd64/qsub -o #{log} #{@@path["lib"]}/fastqc_fq.sh #{@runid}`
   end
 end

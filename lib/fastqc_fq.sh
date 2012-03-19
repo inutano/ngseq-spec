@@ -8,7 +8,6 @@ fastqc_path="/home/iNut/local/bin/fastqc/fastqc"
 runid=$1
 data_dir="${project_dir}/data"
 result_dir="${project_dir}/result/${runid}"
-target_file="${project_dir}/${runid}*fastq*"
 
 fastqc_command="${fastqc_path} --noextract --threads 8 --outdir ${result_dir} ${data_dir}/${runid}*fastq*"
 cleaning_command="rm -fr ${data_dir}/${runid}*fastq*"

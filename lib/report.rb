@@ -50,13 +50,10 @@ class ReportTwitter
   end
   	
   def self.error(missing)
-    missing.join(",").scan(/.{100}/).each do |list|
-      message = <<-MESSAGIO.gsub(/^\s*/,"")
-        @null #{Time.now.strftime("%m/%d %H:%M:%S")}
-        error occurred:
-        #{list.gsub(/,$/,"")}
-      MESSAGIO
-      @@tw.update(message)
-    end
+    message = <<-MESSAGIO.gsub(/^\s*/,"")
+      @null #{Time.now.strftime("%m/%d %H:%M:%S")}
+      #{missing.length.to_s} errors reported.
+    MESSAGIO
+    @@tw.update(message)
   end
 end

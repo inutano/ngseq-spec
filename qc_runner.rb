@@ -84,6 +84,7 @@ if __FILE__ == $0
   
   elsif ARGV.first == "--report"
     loop do
+      puts "report #{Time.now}"
       diskusage = ReportStat.diskusage
       ftpsession = ReportStat.ftpsession
       qstat = ReportStat.qstat
@@ -94,10 +95,14 @@ if __FILE__ == $0
       ReportTwitter.stat(diskusage, ftpsession, qstat)
       ReportTwitter.job(done, available, all)
       ReportTwitter.error(missyou)
-      missyou.each do |runid|
-        record = SRAID.find_by_runid(runid)
-        record.status = "reported"
-        record.save
+      
+      puts "DB updating #{Time.now}"
+      SRAID.transaction do 
+        missyou.each do |runid|
+          record = SRAID.find_by_runid(runid)
+          record.status = "reported"
+          record.save
+        end
       end
       puts "sleep 30min: #{Time.now}"
       sleep 1800
