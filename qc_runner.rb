@@ -35,13 +35,11 @@ if __FILE__ == $0
         executed << record.runid
       end
       
-      SRAID.transaction do
-        executed.each do |runid|
-          record = SRAID.find_by_runid(runid)
-          record.status = "ongoing"
-          record.save
-          puts record.to_s
-        end
+      executed.each do |runid|
+        record = SRAID.find_by_runid(runid)
+        record.status = "ongoing"
+        record.save
+        puts record.to_s
       end
       
       puts "waiting for forked processes to complete: #{Time.now}"
@@ -97,15 +95,13 @@ if __FILE__ == $0
       ReportTwitter.error(missyou)
       
       puts "DB updating #{Time.now}"
-      SRAID.transaction do 
-        missyou.each do |runid|
-          record = SRAID.find_by_runid(runid)
-          record.status = "reported"
-          record.save
-        end
+      missyou.each do |runid|
+        record = SRAID.find_by_runid(runid)
+        record.status = "reported"
+        record.save
       end
       puts "sleep 30min: #{Time.now}"
-      sleep 1800
+      sleep 3600
     end
   end
 end
