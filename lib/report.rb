@@ -31,7 +31,7 @@ class ReportTwitter
   
   def self.stat(diskusage, ftpsession, qstat)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
-      @null #{Time.now.strftime("%m/%d %H:%M:%S")}
+      @null tkr #{Time.now.strftime("%m/%d %H:%M:%S")}
       disk usage: #{diskusage}
       #{ftpsession} ftp sessions
       #{qstat} job submitted
@@ -41,7 +41,7 @@ class ReportTwitter
   
   def self.job(done, available, all)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
-      @null #{Time.now.strftime("%m/%d %H:%M:%S")}
+      @null tkr #{Time.now.strftime("%m/%d %H:%M:%S")}
       #{done.length} of runs finished,
       #{available.length} of runs ahead.
       #{(done.length.to_f / all.length) * 100}%
@@ -51,7 +51,7 @@ class ReportTwitter
   	
   def self.error(missing)
     message = <<-MESSAGIO.gsub(/^\s*/,"")
-      @null #{Time.now.strftime("%m/%d %H:%M:%S")}
+      @null tkr #{Time.now.strftime("%m/%d %H:%M:%S")}
       #{missing.length.to_s} errors reported.
     MESSAGIO
     @@tw.update(message)
