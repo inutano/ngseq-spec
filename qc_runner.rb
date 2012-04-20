@@ -14,7 +14,7 @@ path = YAML.load_file("./lib/config.yaml")["path"]
 ActiveRecord::Base.establish_connection(
   :adapter => "sqlite3",
   :database => path["lib"] + "/production.sqlite3",
-  :timeout => 10000
+  :timeout => 5000
 )
 
 ActiveRecord::Base.logger = Logger.new(path["log"] + "/database.log")
@@ -26,7 +26,8 @@ if __FILE__ == $0
       available = SRAID.available
       threads = []
       executed = []
-      while ReportStat.diskusage.to_i <= 60 && ReportStat.ftpsession <= 8
+      disk = ReportStat.diskusage
+      while disk <= 10000000000000 && ReportStat.ftpsession <= 16
         record = available.shift
         qcp = QCprocess.new(record.runid)
         
@@ -35,51 +36,72 @@ if __FILE__ == $0
         executed << record.runid
       end
       
-      SRAID.transaction do
-        executed.each do |runid|
-          record = SRAID.find_by_runid(runid)
-          record.status = "ongoing"
-          record.save
-          puts record.to_s
+      begin
+        SRAID.transaction do
+          executed.each do |runid|
+            record = SRAID.find_by_runid(runid)
+            record.status = "ongoing"
+            record.save
+            puts record.to_s
+          end
         end
+      rescue CantOpenException, BusyException => error
+        puts error
+        puts "retry after 5min..."
+        sleep 300
+        retry
       end
       
       puts "waiting for forked processes to complete: #{Time.now}"
       threads.each{|th| th.join }
       
-      
-      executed.each do |runid|
-        record = SRAID.find_by_runid(runid)
-        if QCprocess.new(runid).ftp_failed?
-          record.status = "missing"
-          record.save
-          puts record.to_s
-        else
-          record.status = "downloaded"
-          record.save
-          puts record.to_s
+      begin
+        executed.each do |runid|
+          record = SRAID.find_by_runid(runid)
+          if QCprocess.new(runid).ftp_failed?
+            record.status = "missing"
+            record.save
+            puts record.to_s
+          else
+            record.status = "downloaded"
+            record.save
+            puts record.to_s
+          end
         end
+      rescue CantOpenException, BusyException => error
+        puts error
+        puts "retry after 5min..."
+        sleep 300
+        retry
       end
       
-      puts "sleep 3min: #{Time.now}"
-      sleep 180
+      puts "sleep 1min: #{Time.now}"
+      sleep 60
     end
   
   elsif ARGV.first == "--fastqc"
     loop do
       puts "begin fastqc process #{Time.now}"
       downloaded = SRAID.downloaded
-      while ReportStat.diskusage.to_i <= 60 && !downloaded.empty?
+      disk = ReportStat.diskusage
+      while ReportStat.qstat < 500 && disk <= 10000000000000 && !downloaded.empty? 
         record = downloaded.shift
         qcp = QCprocess.new(record.runid)
         qcp.fastqc
         
-        record.status = "done"
-        record.save
-        puts "submit fastqc for " + record.to_s
+        begin
+          record.status = "done"
+          record.save
+          puts "submit fastqc for " + record.to_s
+        rescue CantOpenException, BusyException => error
+          puts error
+          puts "retry after 5min..."
+          sleep 300
+          retry
+        end
       end
-      puts "sleep 5min: #{Time.now}"
-      sleep 300
+      puts "sleep 3min: #{Time.now}"
+      sleep 180
     end
   
   elsif ARGV.first == "--report"
@@ -104,8 +126,8 @@ if __FILE__ == $0
           record.save
         end
       end
-      puts "sleep 30min: #{Time.now}"
-      sleep 1800
+      puts "sleep 1hr: #{Time.now}"
+      sleep 3600
     end
   end
 end
