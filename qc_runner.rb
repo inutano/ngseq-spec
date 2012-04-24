@@ -45,7 +45,7 @@ if __FILE__ == $0
             puts record.to_s
           end
         end
-      rescue CantOpenException, BusyException => error
+      rescue SQLite3::CantOpenException, SQLite3::BusyException => error
         puts error
         puts "retry after 5min..."
         sleep 300
@@ -68,7 +68,7 @@ if __FILE__ == $0
             puts record.to_s
           end
         end
-      rescue CantOpenException, BusyException => error
+      rescue SQLite3::CantOpenException, SQLite3::BusyException => error
         puts error
         puts "retry after 5min..."
         sleep 300
@@ -93,7 +93,7 @@ if __FILE__ == $0
           record.status = "done"
           record.save
           puts "submit fastqc for " + record.to_s
-        rescue CantOpenException, BusyException => error
+        rescue SQLite3::CantOpenException, SQLite3::BusyException => error
           puts error
           puts "retry after 5min..."
           sleep 300
