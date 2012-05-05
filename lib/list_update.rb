@@ -108,3 +108,5 @@ if __FILE__ == $0
     end
   }
 end
+
+## including check of controlled_access items and reload
