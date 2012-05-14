@@ -1,4 +1,4 @@
-#$ -S /bin/bash -j y
+#$ -S /bin/bash -j y -l mem_req=8G,s_vmem=8G
 # fastqc_fq.sh <runid>
 
 project_dir="/home/inutano/project/sra_qualitycheck"
@@ -9,7 +9,7 @@ data_dir="${project_dir}/data"
 result_dir="${project_dir}/result/${runid}"
 
 fastqc_command="${fastqc_path} --noextract --outdir ${result_dir} ${data_dir}/${runid}*fastq*"
-cleaning_command="rm -fr ${data_dir}/${runid}*fastq*"
+cleaning_command="rm -fr ${data_dir}/${runid}*"
 gunzip="/usr/local/bin/gunzip"
 bunzip="/usr/bin/bunzip2"
 
@@ -21,12 +21,12 @@ files=(`ls ${data_dir}/${runid}*`)
 
 case "${files[0]}" in
   *.tar.gz )
-    /bin/tar zxfv ${files[@]} && ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
+    /bin/tar zxfv ${files[@]} -C ${data_dir} && ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
   *.tar.bz2 )
-    /bin/tar jxfv ${files[@]} && ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
+    /bin/tar jxfv ${files[@]} -C ${data_dir} && ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
   *.bz2 )
-    /usr/bin/bunzip2 ${files[@]} && ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
-  *.gz2 )
+    cd ${data_dir} && /usr/bin/bunzip2 ${files[@]} && ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
+  *.gz )
     ${fastqc_command} && ${cleaning_command} || (echo "failed fastqc" && ${cleaning_command}) ;;
   * )
     echo "failed: unknown file type" && exit 1 ;;
