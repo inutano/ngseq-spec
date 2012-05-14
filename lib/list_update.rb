@@ -138,9 +138,13 @@ if __FILE__ == $0
       controlled_run.each do |line|
         runid = line.split("\t").first
         record = SRAID.find_by_runid(runid)
-        record.status = "controlled"
-        record.save
-        puts "updated #{record.to_s}"
+        if record
+          record.status = "controlled"
+          record.save
+          puts "updated #{record.to_s}"
+        else
+          puts "no record for " + runid
+        end
       end
     rescue ActiveRecord::StatementInvalid
       puts "STATEMENT INVALID: trying again.."
