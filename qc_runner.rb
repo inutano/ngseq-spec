@@ -27,7 +27,7 @@ if __FILE__ == $0
       threads = []
       executed = []
       disk = ReportStat.diskusage
-      while disk <= 10000000000000 && ReportStat.ftpsession <= 16
+      while disk <= 10000000000000 && ReportStat.ftpsession <= 16 && !available.empty?
         record = available.shift
         qcp = QCprocess.new(record.runid)
         
@@ -75,8 +75,8 @@ if __FILE__ == $0
         retry
       end
       
-      puts "sleep 1min: #{Time.now}"
-      sleep 60
+      puts "sleep 30sec: #{Time.now}"
+      sleep 30
     end
   
   elsif ARGV.first == "--fastqc"
