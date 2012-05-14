@@ -17,7 +17,7 @@ class SRAIDsInit < ActiveRecord::Migration
       t.string :studyid, :null => false
       t.string :expid, :null => false
       t.string :sampleid, :null => false
-      t.string :status, :null => false # done, ongoing, available, missing
+      t.string :status, :null => false # done, ongoing, available, missing, downloaded, controlled
       t.boolean :paper, :null => false # paper published or not
       t.timestamps
     end
@@ -27,86 +27,143 @@ class SRAIDsInit < ActiveRecord::Migration
 end
 
 class SRAID < ActiveRecord::Base
+  def to_s
+    "#{runid}, status => #{status}, paper => #{paper}"
+  end
+  
+  scope :missing, where( :status => "missing" )
 end
 
 class Update
-  @@accessions = "./SRA_Accessions.tab"
-  @@run_members = "./SRA_Run_Members.tab"
-  @@publication = "./publication.json"
-  
-  def self.accessions
-    FileUtils.mv(@@accessions, "./previous/SRA_Accessions_#{Time.now.strftime("%m%d%H%M%S")}.tab") if File.exist?(@@accessions)
-    `lftp -c "open ftp.ncbi.nlm.nih.gov/sra/reports/Metadata && pget -n 8 SRA_Accessions.tab"`
-    File.open(@@accessions).readlines
+  def initialize
+    @current_dir = "#{File.expand_path(File.dirname(__FILE__))}"
+    @accessions = "#{@current_dir}/SRA_Accessions.tab"
+    @run_members = "#{@current_dir}/SRA_Run_Members.tab"
+    @publication = "#{@current_dir}/publication.json"
+    
+    now = "#{Time.now.strftime("%m%d%H%M%S")}"
+    prev_dir = "#{@current_dir}/previous"
+    if File.exist?(@accessions)
+      FileUtils.mv(@accessions, "#{prev_dir}/SRA_Accessions_#{now}.tab")
+    end
+    if File.exist?(@run_members)
+      FileUtils.mv(@run_members, "#{prev_dir}/SRA_Run_Members_#{now}.tab")
+    end
+    if File.exist?(@publication)
+      FileUtils.mv(@publication, "#{prev_dir}/publication_#{now}.tab")
+    end
+    
+    @ncbi_ftp = "ftp.ncbi.nlm.nih.gov/sra/reports/Metadata"
   end
   
-  def self.run_members
-    FileUtils.mv(@@run_members,"./previous/SRA_Run_Members_#{Time.now.strftime("%m%d%H%M%S")}.tab") if File.exist?(@@run_members)
-    `lftp -c "open ftp.ncbi.nlm.nih.gov/sra/reports/Metadata && pget -n 8 SRA_Run_Members.tab"`
-    File.open(@@run_members).readlines
+  def get_accessions
+    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
+    open(@accessions).readlines
+  end
+  
+  def get_run_members
+    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
+    open(@run_members).readlines
   end
 
-  def self.paperpublished_subid
-    FileUtils.mv(@@publication, "./previous/publication_#{Time.now.strftime("%m%d%H%M%S")}.json") if File.exist?(@@publication)
-    `wget -O ./publication.json "http://sra.dbcls.jp/cgi-bin/publication2.php"`
-    SRAsJSONParser.new(@@publication).all_subid
+  def get_paperpublished_subid
+    publication_url =  "http://sra.dbcls.jp/cgi-bin/publication2.php"
+    `wget -O #{@publication} #{publication_url}`
+    pub_parsed = SRAsJSONParser.new(@publication)
+    pub_parsed.all_subid
   end
 end
 
 if __FILE__ == $0
-
   if !File.exist?("./production.sqlite3")
-    puts "start DB migration #{Time.now}"
-    SRAIDsInit.migrate( :up )
+    puts "begin DB migration #{Time.now}"
+    SRAIDsInit.migrate(:up)
   end
   
-  puts "updating SRA Accessions list from NCBI #{Time.now}"
-  available_on_ftp = Update.accessions.select{|l| l =~ /^.RR/ && l.split("\t")[2] == "live"}
-
-  puts "calcurating items already in DB #{Time.now}"
-  already_in_db = SRAID.all.map{|r| r.runid }
-
-  puts "preparing list to insert: available on ftp site and not yet recorded #{Time.now}"
-  update_list =  available_on_ftp.delete_if{|l| already_in_db.include?(l.split("\t").first)}
+  puts "initializing updater.. #{Time.now}"
+  updater = Update.new
   
-  puts "checking if there are existing items in update list #{Time.now}"
-  result_dirs = Dir.entries("../result")  
-  done = update_list.select{|l| result_dirs.include?(l.split("\t").first)}
-  undone = update_list - done
+  puts "checking newly submitted.. #{Time.now}"
+  submitted_run = updater.get_accessions.select{|l| l =~ /^.RR/ }
+  available_run = submitted_run.select{|l| l.split("\t")[2] == "live" }
+  recorded = SRAID.all.map{|r| r.runid }
+  newly_submitted = available_run.select{|l| recorded.include?(l.split("t").first) }
   
-  puts "start inserting records #{Time.now}"
-  [done, undone].each do |set|
-    SRAID.transaction {
-      set.each do |line|
-        arr = line.split("\t")
-        insert = { :paper => false }
-        insert[ :runid ] = arr[0]
-        insert[ :subid ] = arr[1]
-        insert[ :studyid ] = arr[12]
-        insert[ :expid ] = arr[10]
-        insert[ :sampleid ] = arr[11]
-        if set == done
-          status = "done"
-        else
-          status = "available"
-        end
-        insert[ :status ] = status
+  puts "inserting new records.. #{Time.now}"
+  SRAID.transaction do
+    begin
+      newly_submitted.each do |line|
+        col = line.split("\t")
+        insert = { paper: false,
+                   runid: arr[0],
+                   subid: arr[1],
+                   studyid: arr[12],
+                   expid: arr[10],
+                   sampleid: arr[11],
+                   status: "available"
+                 }
         SRAID.create(insert)
-        puts "inserted #{insert[:runid]} into DB"
+        puts "#{insert[:runid]} inserted as an available data."
       end
-    }
+    rescue ActiveRecord::StatementInvailid
+      puts "STATEMENT INVALID: trying again.."
+      retry
+    end
   end
   
-  puts "updating publication info #{Time.now}"
-  SRAID.transaction {
-    Update.paperpublished_subid.each do |subid|
-      record = SRAID.find_by_subid(subid)
-      if record
-        record.paper = true
-        record.save
+  puts "checking if status of recorded data changed.. #{Time.now}"
+  missing_data = SRAID.missing
+  available_run_ids = available_run.map{|l| l.split("\t").first }
+  SRAID.transaction do
+    begin
+      missing_data.each do |record|
+        runid = record.runid
+        if availble_run_ids.include?(runid)
+          record.status = "available"
+          record.save
+        end
       end
+    rescue ActiveRecord::StatementInvalid
+      puts "STATEMENT INVALID: trying again.."
+      retry
     end
-  }
-end
+  end
 
-## including check of controlled_access items and reload
+  puts "checking data under the controlled access.. #{Time.now}"
+  controlled_run = available_run.select{|l| l.split("\t")[8] == "controlled_access" }
+  
+  puts "updating.. #{Time.now}"
+  SRAID.transaction do
+    begin
+      controlled_run.each do |line|
+        runid = line.split("\t").first
+        record = SRAID.find_by_runid(runid)
+        record.status = "controlled"
+        record.save
+        puts "updated #{record.to_s}"
+      end
+    rescue ActiveRecord::StatementInvalid
+      puts "STATEMENT INVALID: trying again.."
+      retry
+    end
+  end
+  
+  puts "checking data which has published article.. #{Time.now}"
+  paperpublished_subid = updater.get_paperpublished_subid
+  
+  puts "updating.. #{Time.now}"
+  SRAID.transaction do
+    begin
+      paperpublished_subid.each do |subid|
+        record = SRAID.find_by_subid(subid)
+        if record
+          record.paper = true
+          record.save
+        end
+      end
+    rescue ActiveRecord::StatementInvalid
+      puts "STATEMENT INVALID: trying again.."
+      retry
+    end
+  end
+end
