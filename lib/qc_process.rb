@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 require "yaml"
+require "failutils"
 
 class QCprocess
   @@path = YAML.load_file("#{File.expand_path(File.dirname(__FILE__))}/config.yaml")["path"]
@@ -15,6 +16,14 @@ class QCprocess
     `lftp -c "open #{location} && mget -O #{@@path["data"]} #{@runid}* " >& #{log}`
   end
   
+  def get_fq_local(subid, expid)
+    sub_head = subid.slice(0,6)
+    location = "/usr/local/ftp/ddbj_database/dra/fastq/#{sub_head}/#{subid}/#{expid}"
+    files = Dir.entries(location).select{|f| f =~ /^\./ }
+    data_dir = @@path["data"]
+    FileUtils.cp(files, data_dir)
+  end
+  
   def ftp_failed?
     log = Dir.glob(@@path["log"] + "/lftp_#{@runid}*.log").sort.last
     (log && open(log).read =~ /fail/)
@@ -25,3 +34,4 @@ class QCprocess
     `/home/geadmin/UGER/bin/lx-amd64/qsub -N #{@runid} -o #{log} #{@@path["lib"]}/fastqc_fq.sh #{@runid}`
   end
 end
+
