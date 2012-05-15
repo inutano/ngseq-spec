@@ -9,31 +9,44 @@ require "./lib/sraid"
 require "./lib/qc_process"
 require "./lib/report"
 
-path = YAML.load_file("./lib/config.yaml")["path"]
-
-ActiveRecord::Base.establish_connection(
-  :adapter => "sqlite3",
-  :database => path["lib"] + "/production.sqlite3",
-  :timeout => 5000
-)
-
-ActiveRecord::Base.logger = Logger.new(path["log"] + "/database.log")
-
 if __FILE__ == $0
+  path = YAML.load_file("./lib/config.yaml")["path"]
+  ActiveRecord::Base.establish_connection(
+    :adapter => "sqlite3",
+    :database => path["lib"] + "/production.sqlite3",
+    :timeout => 5000
+  )
+
+  ActiveRecord::Base.logger = Logger.new(path["log"] + "/database.log")
+
   if ARGV.first == "--transmit"
     loop do
       puts "begin transmission #{Time.now}"
       available = SRAID.available[0..50]
       threads = []
       executed = []
-      disk = ReportStat.diskusage
-      while disk <= 10000000000000 && ReportStat.ftpsession <= 16 && !available.empty?
+      
+      diskstat = ReportStat.diskusage <= 10_000_000_000_000_000
+      ftpsession = ReportStat.ftpsession <= 16
+      liststat = !available.empty?
+      
+      while diskstat && ftpsession && liststat
         record = available.shift
-        qcp = QCprocess.new(record.runid)
+        runid = record.runid
+        qcp = QCprocess.new(runid)
         
-        th = Thread.fork{qcp.get_fq(record.subid, record.expid)}
+        th = Thread.new do
+          subid = record.subid
+          expid = record.expid
+          qcp.get_fq(subid, expid)
+        end
+        
         threads << th
-        executed << record.runid
+        executed << runid
+        
+        diskstat = ReportStat.diskusage <= 10_000_000_000_000_000
+        ftpsession = ReportStat.ftpsession <= 16
+        liststat = !available.empty?
       end
       
       begin
@@ -53,12 +66,16 @@ if __FILE__ == $0
       end
       
       puts "waiting for forked processes to complete: #{Time.now}"
-      threads.each{|th| th.join }
+      threads.each do |th|
+        th.join
+      end
       
       begin
         executed.each do |runid|
           record = SRAID.find_by_runid(runid)
-          if QCprocess.new(runid).ftp_failed?
+          qcp = QCprocess.new(runid)
+          ftpstat = qcp.ftp_failed?
+          if ftpstat
             record.status = "missing"
             record.save
             puts record.to_s
