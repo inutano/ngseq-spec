@@ -11,7 +11,7 @@ ActiveRecord::Base.establish_connection(
 
 class SRAIDsInit < ActiveRecord::Migration
   def self.up
-    create_table( :sraids ) do |t|
+    create_table(:sraids) do |t|
       t.string :runid, :null => false
       t.string :subid, :null => false
       t.string :studyid, :null => false
@@ -87,7 +87,7 @@ if __FILE__ == $0
   submitted_run = updater.get_accessions.select{|l| l =~ /^.RR/ }
   available_run = submitted_run.select{|l| l.split("\t")[2] == "live" }
   recorded = SRAID.all.map{|r| r.runid }
-  newly_submitted = available_run.select{|l| recorded.include?(l.split("t").first) }
+  newly_submitted = available_run.delete_if{|l| recorded.include?(l.split("t").first) }
   
   puts "inserting new records.. #{Time.now}"
   SRAID.transaction do
@@ -138,13 +138,9 @@ if __FILE__ == $0
       controlled_run.each do |line|
         runid = line.split("\t").first
         record = SRAID.find_by_runid(runid)
-        if record
-          record.status = "controlled"
-          record.save
-          puts "updated #{record.to_s}"
-        else
-          puts "no record for " + runid
-        end
+        record.status = "controlled"
+        record.save
+        puts "updated #{record.to_s}"
       end
     rescue ActiveRecord::StatementInvalid
       puts "STATEMENT INVALID: trying again.."
