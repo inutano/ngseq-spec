@@ -95,17 +95,17 @@ if __FILE__ == $0
       newly_submitted.each do |line|
         col = line.split("\t")
         insert = { paper: false,
-                   runid: arr[0],
-                   subid: arr[1],
-                   studyid: arr[12],
-                   expid: arr[10],
-                   sampleid: arr[11],
+                   runid: col[0],
+                   subid: col[1],
+                   studyid: col[12],
+                   expid: col[10],
+                   sampleid: col[11],
                    status: "available"
                  }
         SRAID.create(insert)
         puts "#{insert[:runid]} inserted as an available data."
       end
-    rescue ActiveRecord::StatementInvailid
+    rescue ActiveRecord::StatementInvalid
       puts "STATEMENT INVALID: trying again.."
       retry
     end
