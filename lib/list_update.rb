@@ -30,8 +30,11 @@ class SRAID < ActiveRecord::Base
   def to_s
     "#{runid}, status => #{status}, paper => #{paper}"
   end
-  
+  scope :available, where( :status => "available" )
+  scope :done, where( :status => "done" )
+  scope :controlled, where( :status => "controlled" )
   scope :missing, where( :status => "missing" )
+  scope :reported, where( :status => "reported" )
 end
 
 class Update
@@ -84,45 +87,82 @@ if __FILE__ == $0
   updater = Update.new
   
   puts "checking newly submitted.. #{Time.now}"
+  
   recorded = SRAID.all.map(&runid)
-  newly_submitted = updater.get_accessions.select do |line|
-    line_sp = line.split("\t")
-    status = line_sp[2]
-    runid = line_sp.first
-    line =~ /^.RR/ && status == "live" && !recorded.include?(runid)
+  puts "number of recorded items: #{recorded.length}"
+  
+  list_parsed = updater.get_accessions.map{|l| l.split("\t") }
+  live_on_ftp = list_parsed.select do |line|
+    id = line[0]
+    status = line[2]
+    id =~ /^.RR/ && status == "live"
   end
+  newly_submitted = live_on_ftp.delete_if do |line|
+    runid = line.first
+    recorded.include?(runid)
+  end
+  puts "number of newly submitted: #{newly_submitted.length}"
   
   puts "inserting new records.. #{Time.now}"
   SRAID.transaction do
     begin
       newly_submitted.each do |line|
-        col = line.split("\t")
         insert = { paper: false,
-                   runid: col[0],
-                   subid: col[1],
-                   studyid: col[12],
-                   expid: col[10],
-                   sampleid: col[11],
+                   runid: line[0],
+                   subid: line[1],
+                   studyid: line[12],
+                   expid: line[10],
+                   sampleid: line[11],
                    status: "available"
                  }
         SRAID.create(insert)
-        puts "#{insert[:runid]} inserted as an available data."
       end
     rescue ActiveRecord::StatementInvalid
       puts "STATEMENT INVALID: trying again.."
       retry
     end
   end
+  puts "done."
   
-  puts "checking if status of recorded data changed.. #{Time.now}"
-  missing_data = SRAID.missing
-  available_run_ids = available_run.map{|l| l.split("\t").first }
+  puts "checking status changed items.. #{Time.now}"
+  missed_runid = SRAID.missing.map(&runid) + SRAID.reported.map(&runid)
+  if not missed_runid.empty?
+    live_runid_on_ftp = live_on_ftp.map{|l| l.first }
+    status_changed_runid = missed_runid.select do |runid|
+      live_runid_on_ftp.include?(runid)
+    end
+  else
+    status_changed_runid = []
+  end
+  puts "number of status changed: #{status_changed_runid.length}"
+  
+  puts "updating.."
   SRAID.transaction do
     begin
-      missing_data.each do |record|
-        runid = record.runid
-        if availble_run_ids.include?(runid)
-          record.status = "available"
+      status_changed_runid.each do |runid|
+        record = SRAID.find_by_runid(runid)
+        record.status = "available"
+        record.save
+      end
+    rescue ActiveRecord::StatementInvalid
+      puts "STATEMENT INVALID: trying again.."
+      retry
+    end
+  end
+  puts "done."
+  
+  puts "checking items under the controlled access.. #{Time.now}"
+  controlled_access = live_on_ftp.select{|l| l[8] == "controlled_access" }
+  puts "number of controlled access: #{controlled_access.length}"
+  
+  puts "updating.. #{Time.now}"
+  SRAID.transaction do
+    begin
+      controlled_access.each do |line|
+        runid = line.first
+        record = SRAID.find_by_runid(runid)
+        if not record.status == "controlled"
+          record.status = "controlled"
           record.save
         end
       end
@@ -131,35 +171,19 @@ if __FILE__ == $0
       retry
     end
   end
-
-  puts "checking data under the controlled access.. #{Time.now}"
-  controlled_run = available_run.select{|l| l.split("\t")[8] == "controlled_access" }
+  puts "done."
   
-  puts "updating.. #{Time.now}"
-  SRAID.transaction do
-    begin
-      controlled_run.each do |line|
-        runid = line.split("\t").first
-        record = SRAID.find_by_runid(runid)
-        record.status = "controlled"
-        record.save
-        puts "updated #{record.to_s}"
-      end
-    rescue ActiveRecord::StatementInvalid
-      puts "STATEMENT INVALID: trying again.."
-      retry
-    end
-  end
   
   puts "checking data which has published article.. #{Time.now}"
   paperpublished_subid = updater.get_paperpublished_subid
+  puts "number of paper-published items (submission id) #{paperpublished_subid.length}"
   
   puts "updating.. #{Time.now}"
   SRAID.transaction do
     begin
       paperpublished_subid.each do |subid|
         record = SRAID.find_by_subid(subid)
-        if record
+        if record && record.paper != true
           record.paper = true
           record.save
         end
@@ -169,4 +193,11 @@ if __FILE__ == $0
       retry
     end
   end
+  puts "done."
+  
+  puts "DB is up-to-date. #{Time.now}"
+  num_a = SRAID.available.length
+  num_d = SRAID.done.length
+  num_c = SRAID.controlled.length
+  puts "available: #{num_a}, done: #{num_d}, controlled: #{num_c}"
 end
