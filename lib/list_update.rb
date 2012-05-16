@@ -87,10 +87,7 @@ if __FILE__ == $0
   updater = Update.new
   
   puts "checking newly submitted.. #{Time.now}"
-  
-  recorded = SRAID.all.map(&runid)
-  puts "number of recorded items: #{recorded.length}"
-  
+  recorded = SRAID.all.map(&:runid)
   list_parsed = updater.get_accessions.map{|l| l.split("\t") }
   live_on_ftp = list_parsed.select do |line|
     id = line[0]
@@ -125,7 +122,7 @@ if __FILE__ == $0
   puts "done."
   
   puts "checking status changed items.. #{Time.now}"
-  missed_runid = SRAID.missing.map(&runid) + SRAID.reported.map(&runid)
+  missed_runid = SRAID.missing.map(&:runid) + SRAID.reported.map(&:runid)
   if not missed_runid.empty?
     live_runid_on_ftp = live_on_ftp.map{|l| l.first }
     status_changed_runid = missed_runid.select do |runid|
