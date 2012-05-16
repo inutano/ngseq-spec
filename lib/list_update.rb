@@ -84,10 +84,13 @@ if __FILE__ == $0
   updater = Update.new
   
   puts "checking newly submitted.. #{Time.now}"
-  submitted_run = updater.get_accessions.select{|l| l =~ /^.RR/ }
-  available_run = submitted_run.select{|l| l.split("\t")[2] == "live" }
-  recorded = SRAID.all.map{|r| r.runid }
-  newly_submitted = available_run.delete_if{|l| recorded.include?(l.split("t").first) }
+  recorded = SRAID.all.map(&runid)
+  newly_submitted = updater.get_accessions.select do |line|
+    line_sp = line.split("\t")
+    status = line_sp[2]
+    runid = line_sp.first
+    line =~ /^.RR/ && status == "live" && !recorded.include?(runid)
+  end
   
   puts "inserting new records.. #{Time.now}"
   SRAID.transaction do
