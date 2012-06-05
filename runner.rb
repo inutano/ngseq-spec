@@ -22,74 +22,51 @@ if __FILE__ == $0
   if ARGV.first == "--transmit"
     loop do
       puts "begin transmission #{Time.now}"
-      available = SRAID.available[0..50]
+      available = SRAID.available[0..16]
+      disk_limit = 10_000_000_000_000_000
+      
       threads = []
-      executed = []
-      
-      diskstat = ReportStat.diskusage <= 10_000_000_000_000_000
-      ftpsession = ReportStat.ftpsession <= 16
-      liststat = !available.empty?
-      
-      while diskstat && ftpsession && liststat
-        record = available.shift
-        runid = record.runid
-        qcp = QCprocess.new(runid)
-        
-        th = Thread.new do
+      fired = []
+      available.each do |record|
+        if ReportStat.diskusage < disk_limit
+          runid = record.runid
           subid = record.subid
           expid = record.expid
-          qcp.get_fq_local(subid, expid)
-        end
-        
-        threads << th
-        executed << runid
-        
-        diskstat = ReportStat.diskusage <= 10_000_000_000_000_000
-        ftpsession = ReportStat.ftpsession <= 16
-        liststat = !available.empty?
-      end
-      
-      begin
-        SRAID.transaction do
-          executed.each do |runid|
-            record = SRAID.find_by_runid(runid)
-            record.status = "ongoing"
-            record.save
-            puts record.to_s
+          
+          qcp = QCprocess.new(runid)
+          th = Thread.new do
+            qcp.get_fq_local(subid, expid)
           end
+          
+          threads << th
+          fired << runid
+          puts "copying #{runid}.."
         end
-      rescue SQLite3::CantOpenException, SQLite3::BusyException, ActiveRecord::StatementInvalid => error
-        puts error
-        puts "retry after 5min..."
-        sleep 300
-        retry
       end
       
-      puts "waiting for forked processes to complete: #{Time.now}"
+      puts "waiting #{threads.length} forked processes to complete.. #{Time.now}"
       threads.each do |th|
         th.join
       end
       
-      begin
-        executed.each do |runid|
+      missing = open("#{path["log"]}/missing.idlist").readlines
+      SRAID.transaction do
+        fired.each do |runid|
           record = SRAID.find_by_runid(runid)
-          qcp = QCprocess.new(runid)
-          ftpstat = qcp.ftp_failed?
-          if ftpstat
-            record.status = "missing"
-            record.save
-            puts record.to_s
-          else
-            record.status = "downloaded"
-            record.save
-            puts record.to_s
+          begin
+            if missing.include?(runid)
+              record.status = "missing"
+              record.save
+              puts "missing: #{runid}"
+            else
+              record.status = "downloaded"
+              record.save
+              puts "downloaded: #{runid}""
+            end
+          rescue
+            retry
           end
         end
-      rescue SQLite3::CantOpenException, SQLite3::BusyException, ActiveRecord::StatementInvalid => error
-        puts error
-        puts "retry after 5min..."
-        sleep 300
-        retry
       end
       
       puts "sleep 30sec: #{Time.now}"
