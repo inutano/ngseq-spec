@@ -38,7 +38,7 @@ if __FILE__ == $0
         th = Thread.new do
           subid = record.subid
           expid = record.expid
-          qcp.get_fq(subid, expid)
+          qcp.get_fq_local(subid, expid)
         end
         
         threads << th
