@@ -49,7 +49,7 @@ if __FILE__ == $0
         th.join
       end
       
-      missing = open("#{path["log"]}/missing.idlist").readlines
+      missing = open("#{path["log"]}/missing.idlist").readlines.map{|l| l.chomp }
       SRAID.transaction do
         fired.each do |runid|
           record = SRAID.find_by_runid(runid)
@@ -61,7 +61,7 @@ if __FILE__ == $0
             else
               record.status = "downloaded"
               record.save
-              puts "downloaded: #{runid}""
+              puts "downloaded: #{runid}"
             end
           rescue
             retry
@@ -69,8 +69,8 @@ if __FILE__ == $0
         end
       end
       
-      puts "sleep 30sec: #{Time.now}"
-      sleep 30
+      puts "sleep 5sec: #{Time.now}"
+      sleep 5
     end
   
   elsif ARGV.first == "--fastqc"
