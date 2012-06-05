@@ -20,11 +20,11 @@ class QCprocess
     sub_head = subid.slice(0,6)
     location = "/usr/local/ftp/ddbj_database/dra/fastq/#{sub_head}/#{subid}/#{expid}"
     begin
-      files = Dir.entries(location).select{|f| f =~ /^\./ }
+      files = Dir.entries(location).select{|f| f =~ /^#{@runid}/ }
       data_dir = @@path["data"]
       FileUtils.cp(files, data_dir)
     rescue
-      open(@@path["log"] + "/missing.idlist","r"){|f| f.puts(expid) }
+      open(@@path["log"] + "/missing.idlist","r"){|f| f.puts(@runid) }
     end
   end
   
