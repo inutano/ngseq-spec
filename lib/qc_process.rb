@@ -2,6 +2,7 @@
 
 require "yaml"
 require "fileutils"
+require "ap"
 
 class QCprocess
   @@path = YAML.load_file("#{File.expand_path(File.dirname(__FILE__))}/config.yaml")["path"]
@@ -21,10 +22,16 @@ class QCprocess
     location = "/usr/local/ftp/ddbj_database/dra/fastq/#{sub_head}/#{subid}/#{expid}"
     begin
       files = Dir.entries(location).select{|f| f =~ /^#{@runid}/ }
+      files_fullpath = files.map{|f| "#{location}/#{f}" }
       data_dir = @@path["data"]
-      FileUtils.cp(files, data_dir)
+      
+      if not files.empty?
+        FileUtils.cp(files_fullpath, data_dir)
+      else
+        open(@@path["log"] + "/missing.idlist","a"){|f| f.puts(@runid) }
+      end
     rescue
-      open(@@path["log"] + "/missing.idlist","r"){|f| f.puts(@runid) }
+      open(@@path["log"] + "/missing.idlist","a"){|f| f.puts(@runid) }
     end
   end
   
@@ -34,7 +41,9 @@ class QCprocess
   end
 
   def fastqc
-    log = @@path["log"] + "/fastqc_#{@runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
+    log_dir = "#{@@path["log"]}/#{@runid.slice(0,6)}"
+    FileUtils.mkdir(log_dir) if not File.exist?(log_dir)
+    log = log_dir + "/fastqc_#{@runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
     `/home/geadmin/UGER/bin/lx-amd64/qsub -N #{@runid} -o #{log} #{@@path["lib"]}/fastqc_fq.sh #{@runid}`
   end
 end
