@@ -28,13 +28,13 @@ end
 def unarchive
   pdir = "/home/inutano/project/sra_qualitycheck"
   dir = pdir + "/litesra"
-  files = Dir.glob("#{dir}/*.litesra")
+  files = Dir.glob("#{dir}/*.lite.sra")
   files.each do |file|
     file =~ /^.+(\wRR\d{6}).+$/
     runid = $1
     id_head = runid.slice(0,6)
     log_dir = pdir + "/log/" + id_head
-    FileUtils.mkdir(log_dir) if not File.exist?(log_dir)
+    FileUtils.mkdir(log_dir) unless File.exist?(log_dir)
     log = log_dir + "/litesra_#{runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
     `/home/geadmin/UGER/bin/lx-amd64/qsub -N #{runid} -o #{log} ./litesra_unarchive.sh #{file}`
   end
@@ -46,8 +46,8 @@ if __FILE__ == $0
       :adapter => "sqlite3",
       :database => "./production.sqlite3"
   )
-  logfile = "/home/inutano/project/sra_qualitycheck/log/database.log"
-  ActiveRecord::Base.logger = Logger.new(logfile)
+  db_log = "/home/inutano/project/sra_qualitycheck/log/database.log"
+  ActiveRecord::Base.logger = Logger.new(db_log)
   
   # get no fq but compressed
   loop do
@@ -65,8 +65,8 @@ if __FILE__ == $0
     threads.each do |th|
       th.join
     end
-  
-    puts "sleep 5sec #{Time.now}" 
+    
+    puts "done. sleep 5sec #{Time.now}" 
     sleep 5
   
     # unarchiving (run sh)
