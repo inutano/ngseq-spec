@@ -1,14 +1,16 @@
 #$ -S /bin/bash -j y -l mem_req=8G,s_vmem=8G
-# litesra_unarchive.sh <lite.sra full file path>
+# litesra_unarchive.sh <runid>
 
-dest="/home/inutano/project/sra_qualitycheck/litesra"
-data_dir="/home/inutano/project/sra_qualitycheck/data"
-toolkit="/home/inutano/local/bin/sratoolkit/fastq-dump --split-3"
-file_path=$1
-runid=`echo $1 | cut -d "/" -f 13`
-cleaning="rm -fr ${file_path}"
-error_log="/home/inutano/project/sra_qualitycheck/litesra/unarchive_errror.log"
+runid=${1}
+dump="/home/inutano/local/bin/sratoolkit/fastq-dump --split-3"
+p_dir="/home/inutano/project/sra_qualitycheck"
+litesra_dir="${p_dir}/litesra"
+data_dir="${p_dir}/data"
+error_log="${litesra_dir}/unarchive_error.log"
 
-cd ${dest}
-${toolkit} ${file_path} && mv ${dest}/${runid}*.fastq ${data_dir} && ${cleaning} ||\
-(echo "failed unarchive ${file_path}" >> error_log)
+cd ${litesra_dir}
+${dump} ${litesra_dir}/${runid}.lite.sra \
+&& mv ${litesra_dir}/${runid}*.fastq ${data_dir} \
+&& rm -f ${litesra_dir}/${runid}.lite.sra \
+|| (echo "failed unarchive ${runid}" >> ${error_log})
+
