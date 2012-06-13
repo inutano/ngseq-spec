@@ -30,7 +30,7 @@ def unarchive(runid)
     log_dir = pdir + "/log/" + runid.slice(0,6)
     FileUtils.mkdir(log_dir) unless File.exist?(log_dir)
     log = log_dir + "/litesra_#{runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
-    `/home/geadmin/UGER/bin/lx-amd64/qsub -N #{runid} -o #{log} ./litesra_unarchive.sh #{file}`
+    `/home/geadmin/UGER/bin/lx-amd64/qsub -N "dump.#{runid}" -o #{log} ./litesra_unarchive.sh #{runid}`
     puts "unarchive: #{runid}"
   end
 end
@@ -84,9 +84,11 @@ if __FILE__ == $0
     ids.each do |runid|
       begin
         record = SRAID.find_by_runid(runid)
-        record.status = "downloaded"
-        record.save
-        puts "downloaded: " + runid
+        if record.status == "missing"
+          record.status = "downloaded"
+          record.save
+          puts "downloaded: " + runid
+        end
       rescue
         sleep 5
         retry
