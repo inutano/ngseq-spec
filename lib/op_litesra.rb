@@ -23,15 +23,11 @@ def get_litesra(fpath)
   FileUtils.cp(fpath, dest)
 end
 
-def unarchive
+def unarchive(runid)
   pdir = "/home/inutano/project/sra_qualitycheck"
-  dir = pdir + "/litesra"
-  files = Dir.glob("#{dir}/*.lite.sra")
-  files.each do |file|
-    file =~ /^.+(\wRR\d{6}).+$/
-    runid = $1
-    id_head = runid.slice(0,6)
-    log_dir = pdir + "/log/" + id_head
+  file = "#{pdir}/litesra/#{runid}.lite.sra"
+  if File.exist?(file)
+    log_dir = pdir + "/log/" + runid.slice(0,6)
     FileUtils.mkdir(log_dir) unless File.exist?(log_dir)
     log = log_dir + "/litesra_#{runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
     `/home/geadmin/UGER/bin/lx-amd64/qsub -N #{runid} -o #{log} ./litesra_unarchive.sh #{file}`
@@ -76,7 +72,10 @@ if __FILE__ == $0
     
     # unarchiving (run sh)
     puts "unarchiving.. #{Time.now}"
-    unarchive
+    transferred = missing.map{|record| record.runid }
+    transferred.each do |runid|
+      unarchive(runid)
+    end
     
     # status changing
     puts "changing file status.. #{Time.now}"
@@ -94,7 +93,7 @@ if __FILE__ == $0
       end
     end
     
-    puts "sleep 3sec #{Time.now}"
-    sleep 3
+    puts "sleep 5sec #{Time.now}"
+    sleep 5
   end
 end
