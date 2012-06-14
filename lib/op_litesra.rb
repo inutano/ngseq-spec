@@ -75,6 +75,9 @@ if __FILE__ == $0
     transferred = missing.map{|record| record.runid }
     transferred.each do |runid|
       unarchive(runid)
+      record = SRAID.find_by_runid(runid)
+      record.status = "unarchiving"
+      record.save
     end
     
     # status changing
@@ -84,7 +87,7 @@ if __FILE__ == $0
     ids.each do |runid|
       begin
         record = SRAID.find_by_runid(runid)
-        if record.status == "missing"
+        if record.status == "unarchiving"
           record.status = "downloaded"
           record.save
           puts "downloaded: " + runid
