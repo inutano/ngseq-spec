@@ -1,4 +1,4 @@
-#$ -S /bin/bash -j y -l mem_req=8G,s_vmem=8G
+#$ -S /bin/bash -j y -l mem_req=8G,s_vmem=8G -pe def_slot 3
 # fastqc_fq.sh <runid>
 
 project_dir="/home/inutano/project/sra_qualitycheck"
