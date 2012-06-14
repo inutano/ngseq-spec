@@ -67,7 +67,8 @@ if __FILE__ == $0
     loop do
       puts "begin fastqc process #{Time.now}"
       downloaded = SRAID.downloaded
-      while ReportStat.diskusage.to_i <= 60 && !downloaded.empty?
+#      while ReportStat.diskusage.to_i <= 60 && !downloaded.empty?
+      while !downloaded.empty?
         record = downloaded.shift
         qcp = QCprocess.new(record.runid)
         qcp.fastqc
