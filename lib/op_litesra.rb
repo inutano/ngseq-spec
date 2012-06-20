@@ -75,9 +75,14 @@ if __FILE__ == $0
     transferred = missing.map{|record| record.runid }
     transferred.each do |runid|
       unarchive(runid)
-      record = SRAID.find_by_runid(runid)
-      record.status = "unarchiving"
-      record.save
+      begin
+        record = SRAID.find_by_runid(runid)
+        record.status = "unarchiving"
+        record.save
+      rescue
+        sleep 5
+        retry
+      end
     end
     
     # status changing
