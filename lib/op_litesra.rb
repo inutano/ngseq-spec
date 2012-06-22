@@ -72,7 +72,12 @@ if __FILE__ == $0
     
     # unarchiving (run sh)
     puts "unarchiving.. #{Time.now}"
-    transferred = missing.map{|record| record.runid }
+    transfer_requested = missing.map{|record| record.runid }
+    transferred = transfer_requested.select do |runid|
+      record = SRAID.find_by_runid(runid)
+      status = record.status
+      status != "reported"
+    end
     transferred.each do |runid|
       unarchive(runid)
       begin
