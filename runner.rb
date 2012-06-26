@@ -16,19 +16,19 @@ if __FILE__ == $0
     :database => path["lib"] + "/production.sqlite3",
     :timeout => 5000
   )
-
+  
   ActiveRecord::Base.logger = Logger.new(path["log"] + "/database.log")
 
   if ARGV.first == "--transmit"
     loop do
       puts "begin transmission #{Time.now}"
-      available = SRAID.available[0..16]
+      available = SRAID.available[0..15]
       disk_limit = 10_000_000_000_000_000
       
       threads = []
       fired = []
-      available.each do |record|
-        if ReportStat.diskusage < disk_limit
+      if ReportStat.diskusage < disk_limit
+        available.each do |record|
           runid = record.runid
           subid = record.subid
           expid = record.expid
