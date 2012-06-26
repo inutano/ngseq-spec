@@ -3,6 +3,7 @@
 require "yaml"
 require "active_record"
 require "logger"
+require "fileutils"
 require "twitter"
 
 require "./lib/sraid"
@@ -49,7 +50,8 @@ if __FILE__ == $0
         th.join
       end
       
-      missing = open("#{path["log"]}/missing.idlist").readlines.map{|l| l.chomp }
+      miss_list = path["log"] + "missing.idlist"
+      missing = open(miss_list).readlines.map{|l| l.chomp }
       SRAID.transaction do
         fired.each do |runid|
           record = SRAID.find_by_runid(runid)
@@ -68,6 +70,7 @@ if __FILE__ == $0
           end
         end
       end
+      FileUtils.rm_f(miss_list)
       
       puts "sleep 5sec: #{Time.now}"
       sleep 5
