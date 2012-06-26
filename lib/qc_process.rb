@@ -20,7 +20,7 @@ class QCprocess
   def get_fq_local(subid, expid)
     sub_head = subid.slice(0,6)
     location = "/usr/local/ftp/ddbj_database/dra/fastq/#{sub_head}/#{subid}/#{expid}"
-    miss_list = @@path["log"] = "/missing.idlist"
+    miss_list = @@path["log"] + "/missing.idlist"
     FileUtils.touch(miss_list) unless File.exist?(miss_list)
     begin
       files = Dir.entries(location).select{|f| f =~ /^#{@runid}/ }

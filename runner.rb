@@ -50,7 +50,7 @@ if __FILE__ == $0
         th.join
       end
       
-      miss_list = path["log"] + "missing.idlist"
+      miss_list = path["log"] + "/missing.idlist"
       missing = open(miss_list).readlines.map{|l| l.chomp }
       SRAID.transaction do
         fired.each do |runid|
