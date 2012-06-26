@@ -15,7 +15,7 @@ gunzip="/usr/local/bin/gunzip"
 bunzip="/usr/bin/bunzip2"
 
 if [ ! -e ${result_dir} ] ; then
-  mkdir ${result_dir}
+  mkdir -p ${result_dir}
 fi
 
 files=(`ls ${data_dir}/${runid}*`)
