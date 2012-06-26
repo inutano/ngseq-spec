@@ -2,7 +2,8 @@
 # litesra_unarchive.sh <runid>
 
 runid=${1}
-dump="/home/inutano/local/bin/sratoolkit/fastq-dump --split-3"
+option=${2}
+dump="/home/inutano/local/bin/sratoolkit/fastq-dump ${option}"
 p_dir="/home/inutano/project/sra_qualitycheck"
 litesra_dir="${p_dir}/litesra"
 data_dir="${p_dir}/data"
