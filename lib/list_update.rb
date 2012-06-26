@@ -42,34 +42,34 @@ class Update
     @current_dir = "#{File.expand_path(File.dirname(__FILE__))}"
     @accessions = "#{@current_dir}/SRA_Accessions.tab"
     @run_members = "#{@current_dir}/SRA_Run_Members.tab"
-    @publication = "#{@current_dir}/publication.json"
-    
-    now = "#{Time.now.strftime("%m%d%H%M%S")}"
-    prev_dir = "#{@current_dir}/previous"
-    if File.exist?(@accessions)
-      FileUtils.mv(@accessions, "#{prev_dir}/SRA_Accessions_#{now}.tab")
-    end
-    if File.exist?(@run_members)
-      FileUtils.mv(@run_members, "#{prev_dir}/SRA_Run_Members_#{now}.tab")
-    end
-    if File.exist?(@publication)
-      FileUtils.mv(@publication, "#{prev_dir}/publication_#{now}.tab")
-    end
-    
+    @publication = "#{@current_dir}/publication.json"  
+    @prev_dir = "#{@current_dir}/previous"
     @ncbi_ftp = "ftp.ncbi.nlm.nih.gov/sra/reports/Metadata"
   end
   
   def get_accessions
-    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
+#    if File.exist?(@accessions)
+#      now = "#{Time.now.strftime("%m%d%H%M%S")}"
+#      FileUtils.mv(@accessions, "#{@prev_dir}/SRA_Accessions_#{now}.tab")
+#    end
+#    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
     open(@accessions).readlines
   end
   
   def get_run_members
-    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
+#    if File.exist?(@run_members)
+#      now = "#{Time.now.strftime("%m%d%H%M%S")}"
+#      FileUtils.mv(@run_members, "#{@prev_dir}/SRA_Run_Members_#{now}.tab")
+#    end
+#    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
     open(@run_members).readlines
   end
 
   def get_paperpublished_subid
+    if File.exist?(@publication)
+      now = "#{Time.now.strftime("%m%d%H%M%S")}"
+      FileUtils.mv(@publication, "#{@prev_dir}/publication_#{now}.tab")
+    end
     publication_url =  "http://sra.dbcls.jp/cgi-bin/publication2.php"
     `wget -O #{@publication} #{publication_url}`
     pub_parsed = SRAsJSONParser.new(@publication)
