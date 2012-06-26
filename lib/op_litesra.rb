@@ -30,7 +30,7 @@ def unarchive(runid)
     log_dir = pdir + "/log/" + runid.slice(0,6)
     FileUtils.mkdir(log_dir) unless File.exist?(log_dir)
     log = log_dir + "/litesra_#{runid}_#{Time.now.strftime("%m%d%H%M%S")}.log"
-    `/home/geadmin/UGER/bin/lx-amd64/qsub -N "dump.#{runid}" -o #{log} ./litesra_unarchive.sh #{runid}`
+    `/home/geadmin/UGER/bin/lx-amd64/qsub -N "dump.#{runid}" -o #{log} ./litesra_unarchive.sh #{runid} --split-3`
     puts "unarchive: #{runid}"
   end
 end
