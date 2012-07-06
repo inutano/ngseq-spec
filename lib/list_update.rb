@@ -4,11 +4,6 @@ require "#{File.expand_path(File.dirname(__FILE__))}/parse_sras_json.rb"
 require "fileutils"
 require "active_record"
 
-ActiveRecord::Base.establish_connection(
-  :adapter => "sqlite3",
-  :database => "./production.sqlite3"
-)
-
 class SRAIDsInit < ActiveRecord::Migration
   def self.up
     create_table(:sraids) do |t|
@@ -82,6 +77,11 @@ if __FILE__ == $0
     puts "begin DB migration #{Time.now}"
     SRAIDsInit.migrate(:up)
   end
+  
+  ActiveRecord::Base.establish_connection(
+    :adapter => "sqlite3",
+    :database => "./production.sqlite3"
+  )
   
   puts "initializing updater.. #{Time.now}"
   updater = Update.new
