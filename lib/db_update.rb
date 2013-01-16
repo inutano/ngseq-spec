@@ -46,29 +46,28 @@ class Updater
   def load_files(config_path)
     config = YAML.load_file(config)
     fpath = config["fpath"]
-    @resources = fpath["resources"]
-    @result = fpath["result"]
-    @accessions = fpath["sra_accessions"]
-    @run_members = fpath["sra_run_members"]
-    @publication = fpath["publication"]
-    @publication_url = fpath["publication_url"]
-    @ncbi_ftp = fpath["ncbi_ftp"]
-    @now = Time.now.strftime("%Y%m%d%H%M%S")
+    @@resources = fpath["resources"]
+    @@ncbi_ftp = fpath["ncbi_ftp"]
+    @@accessions = fpath["sra_accessions"]
+    @@run_members = fpath["sra_run_members"]
+    @@publication = fpath["publication"]
+    @@publication_url = fpath["publication_url"]
+    @@now = Time.now.strftime("%Y%m%d%H%M%S")
   end
   
   def self.accessions
-    FileUtils.mv(@accessions, File.join(@resources, "Acc.#{@now}")) if File.exist?(@accessions)
-    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
+    FileUtils.mv(@@accessions, File.join(@@resources, "/Acc.#{@@now}")) if File.exist?(@@accessions)
+    `lftp -c "open #{@@ncbi_ftp} && pget -n 8 SRA_Accessions.tab -o #{@@accessions}"`
   end
   
   def self.run_members
-    FileUtils.mv(@run_members, File.join(@resources, "RMem.#{@now}")) if File.exist?(@run_members)
-    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
+    FileUtils.mv(@@run_members, File.join(@@resources, "/RMem.#{@@now}")) if File.exist?(@@run_members)
+    `lftp -c "open #{@@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab -o #{@@run_members}"`
   end
 
   def self.publication
-    FileUtils.mv(@publication, File.join(@resources, "pub.#{@now}")) if File.exist?(@publication)
-    `wget -O #{@publication} #{publication_url}`
+    FileUtils.mv(@@publication, File.join(@@resources, "/pub.#{@@now}")) if File.exist?(@@publication)
+    `wget -O #{@@publication} #{@@publication_url}`
   end
   
   def self.all_files
@@ -76,7 +75,22 @@ class Updater
     self.run_members
     self.publication
   end
-  
+end
+
+class SRARun
+  def load_files(config_path)
+    config = YAML.load_file(config)
+    fpath = config["fpath"]
+    @@resources = fpath["resources"]
+    @@result = fpath["result"]
+    @@accessions = fpath["sra_accessions"]
+    @@run_members = fpath["sra_run_members"]
+    @@publication = fpath["publication"]
+    @@publication_url = fpath["publication_url"]
+    @@ncbi_ftp = fpath["ncbi_ftp"]
+    @@now = Time.now.strftime("%Y%m%d%H%M%S")
+  end
+
   def initialize(runid)
     @runid = runid
   end
@@ -114,6 +128,11 @@ class Updater
       # available
       0
     end
+  end
+  
+  def paper
+    json = open(@publication){|f| JSON.load(f) }
+    sraids
   end
   
   def insert
