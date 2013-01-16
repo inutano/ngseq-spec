@@ -47,6 +47,7 @@ class Updater
     config = YAML.load_file(config)
     fpath = config["fpath"]
     @resources = fpath["resources"]
+    @result = fpath["result"]
     @accessions = fpath["sra_accessions"]
     @run_members = fpath["sra_run_members"]
     @publication = fpath["publication"]
@@ -70,10 +71,59 @@ class Updater
     `wget -O #{@publication} #{publication_url}`
   end
   
-  def self.all
+  def self.all_files
     self.accessions
     self.run_members
     self.publication
+  end
+  
+  def initialize(runid)
+    @runid = runid
+  end
+  
+  def subid
+    `grep -m 1 #{@runid} #{@accessions} | cut -f 2`.chomp
+  end
+  
+  def studyid
+    `grep -m 1 #{@runid} #{@run_members} | cut -f 5`.chomp
+  end
+  
+  def expid
+    `grep -m 1 #{@runid} #{@run_members} | cut -f 3`.chomp
+  end
+  
+  def sampleid
+    `grep -m 1 #{@runid} #{@run_members} | cut -f 4`.chomp
+  end
+  
+  def status
+    accessibility = `grep -m 1 #{@runid} #{@accessions} | cut -f 9`.chomp
+    result_path = File.join(@result, @runid.slice(0..5), @runid)
+    
+    if accessibility == "controlled_access"
+      #controlled
+      1
+    elsif !File.exist?(result_path)
+      # available
+      0
+    elsif !Dir.entries(result_path).select{|f| f =~ /#{@runid}/ }.empty?
+      # done
+      2
+    else
+      # available
+      0
+    end
+  end
+  
+  def insert
+    { runid: @runid,
+      subid: self.subid,
+      studyid: self.studyid,
+      expid: self.expid,
+      sampleid: self.sampleid,
+      status: self.status,
+      paper: self.paper }
   end
 
   def publication_parser
@@ -81,6 +131,8 @@ class Updater
     pub_parsed.all_subid
   end
 end
+
+class 
 
 def mess(message)
   puts Time.now.to_s + "\s" + message
@@ -90,23 +142,21 @@ if __FILE__ == $0
   config_path = File.expand_path(File.dirname(__FILE__)) + "/config.yaml"
   config = YAML.load_file(config_path)
   
+  Groonga::Context.default_options = { encoding: :utf8 }
+  
   case ARGV.first
   when "--up"
-    SRAIDsInit.migrate(:up)
-  when "--down"
-    SRAIDsInit.migrate(:down)
+    create_db(config["db_path"])
+
   when "--update"
     mess "connecting DB.."
-    ActiveRecord::Base.establish_connection(
-      :adapter => "sqlite3",
-      :database => config["db_path"]
-    )
+    Groonga::Database.open(db_path)
     mess "done."
     
     if ARGV[1] != "--manual"
       mess "updating ID table files.."
       Updater.load_files(config_path)
-      Updater.all
+      Updater.all_files
       mess "done."
     end
     
