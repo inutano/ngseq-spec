@@ -3,45 +3,47 @@
 # status code
 # available: 0
 
-require File.expand_path(File.dirname(__FILE__)) + "/parse_sras_json.rb"
-require "active_record"
+require "groonga"
 require "yaml"
 require "open-uri"
+require "parallel"
 
-class SRAIDsInit < ActiveRecord::Migration
-  def self.up
-    create_table(:sraids) do |t|
-      t.string :runid, :null => false, :limit => 9
-      t.string :subid, :null => false, :limit => 9
-      t.string :studyid, :limit => 9
-      t.string :expid, :limit => 9
-      t.string :sampleid, :limit => 9
-      t.integer :status, :null => false, :limit => 2 # done, ongoing, available, missing, downloaded, controlled
-      t.boolean :paper, :null => false # paper published or not
-      t.timestamps
-    end
-    add_index :sraids, :runid, :name => :runid_idx
-    add_index :sraids, :status, :name => :status_idx
-    add_index :sraids, :paper, :name => :paper_idx
+def create_db(db_path)
+  Groonga::Database.create(:path => db_path)
+  
+  Groonga::Schema.create_table("SRAIDs", :type => :hash)
+  Groonga::Schema.change_table("SRAIDs") do |t|
+    t.short_text("subid")
+    t.short_text("studyid")
+    t.short_text("expid")
+    t.short_text("sampleid")
+    t.uint16("status")
+    t.bool("paper")
   end
-  def self.down
-    drop_table(:sraids)
+  
+  Groonga::Schema.create_table("Idx_hash", :type => :hash)
+  Groonga::Schema.change_table("Idx_hash") do |t|
+    t.index("SRAIDs.status")
+    t.index("SRAIDs.paper")
   end
 end
 
-class SRAID < ActiveRecord::Base
-  def to_s
-    "#{runid}, status => #{status}, paper => #{paper}"
-  end
-  scope :available, where( :status => "available" )
-  scope :done, where( :status => "done" )
-  scope :controlled, where( :status => "controlled" )
-  scope :missing, where( :status => "missing" )
-  scope :reported, where( :status => "reported" )
+def add_record(insert)
+  db = Groonga["SRAIDs"]
+  runid = insert[:runid]
+  db.add(runid)
+  
+  record = db[runid]
+  record.subid = insert[:subid]
+  record.studyid = insert[:studyid]
+  record.expid = insert[:expid]
+  record.sampleid = insert[:sampleid]
+  record.status = insert[:status]
+  record.paper = insert[:paper]
 end
 
 class Updater
-  def initialize(config_path)
+  def load_files(config_path)
     config = YAML.load_file(config)
     fpath = config["fpath"]
     @resources = fpath["resources"]
@@ -53,19 +55,25 @@ class Updater
     @now = Time.now.strftime("%Y%m%d%H%M%S")
   end
   
-  def update_accessions
+  def self.accessions
     FileUtils.mv(@accessions, File.join(@resources, "Acc.#{@now}")) if File.exist?(@accessions)
     `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
   end
   
-  def update_run_members
+  def self.run_members
     FileUtils.mv(@run_members, File.join(@resources, "RMem.#{@now}")) if File.exist?(@run_members)
     `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
   end
 
-  def update_publication
+  def self.publication
     FileUtils.mv(@publication, File.join(@resources, "pub.#{@now}")) if File.exist?(@publication)
     `wget -O #{@publication} #{publication_url}`
+  end
+  
+  def self.all
+    self.accessions
+    self.run_members
+    self.publication
   end
 
   def publication_parser
@@ -74,16 +82,45 @@ class Updater
   end
 end
 
+def mess(message)
+  puts Time.now.to_s + "\s" + message
+end
+
 if __FILE__ == $0
-  if !File.exist?("./production.sqlite3")
-    puts "begin DB migration #{Time.now}"
-    SRAIDsInit.migrate(:up)
-  end
+  config_path = File.expand_path(File.dirname(__FILE__)) + "/config.yaml"
+  config = YAML.load_file(config_path)
   
-  ActiveRecord::Base.establish_connection(
-    :adapter => "sqlite3",
-    :database => "./production.sqlite3"
-  )
+  case ARGV.first
+  when "--up"
+    SRAIDsInit.migrate(:up)
+  when "--down"
+    SRAIDsInit.migrate(:down)
+  when "--update"
+    mess "connecting DB.."
+    ActiveRecord::Base.establish_connection(
+      :adapter => "sqlite3",
+      :database => config["db_path"]
+    )
+    mess "done."
+    
+    if ARGV[1] != "--manual"
+      mess "updating ID table files.."
+      Updater.load_files(config_path)
+      Updater.all
+      mess "done."
+    end
+    
+    mess "checking latest submissions.."
+    mess "done."
+    
+    mess "insert submissions.."
+    mess "done."
+    
+    mess ""
+    mess
+    
+  when "--help"
+  end
   
   puts "initializing updater.. #{Time.now}"
   updater = Update.new
