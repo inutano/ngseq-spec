@@ -1,23 +1,31 @@
 # -*- coding: utf-8 -*-
+# updates sraid db
+# status code
+# available: 0
 
-require "#{File.expand_path(File.dirname(__FILE__))}/parse_sras_json.rb"
-require "fileutils"
+require File.expand_path(File.dirname(__FILE__)) + "/parse_sras_json.rb"
 require "active_record"
+require "yaml"
+require "open-uri"
 
 class SRAIDsInit < ActiveRecord::Migration
   def self.up
     create_table(:sraids) do |t|
-      t.string :runid, :null => false
-      t.string :subid, :null => false
-      t.string :studyid, :null => false
-      t.string :expid, :null => false
-      t.string :sampleid, :null => false
-      t.string :status, :null => false # done, ongoing, available, missing, downloaded, controlled
+      t.string :runid, :null => false, :limit => 9
+      t.string :subid, :null => false, :limit => 9
+      t.string :studyid, :limit => 9
+      t.string :expid, :limit => 9
+      t.string :sampleid, :limit => 9
+      t.integer :status, :null => false, :limit => 2 # done, ongoing, available, missing, downloaded, controlled
       t.boolean :paper, :null => false # paper published or not
       t.timestamps
     end
+    add_index :sraids, :runid, :name => :runid_idx
+    add_index :sraids, :status, :name => :status_idx
+    add_index :sraids, :paper, :name => :paper_idx
   end
   def self.down
+    drop_table(:sraids)
   end
 end
 
@@ -32,41 +40,35 @@ class SRAID < ActiveRecord::Base
   scope :reported, where( :status => "reported" )
 end
 
-class Update
-  def initialize
-    @current_dir = "#{File.expand_path(File.dirname(__FILE__))}"
-    @accessions = "#{@current_dir}/SRA_Accessions.tab"
-    @run_members = "#{@current_dir}/SRA_Run_Members.tab"
-    @publication = "#{@current_dir}/publication.json"  
-    @prev_dir = "#{@current_dir}/previous"
-    @ncbi_ftp = "ftp.ncbi.nlm.nih.gov/sra/reports/Metadata"
+class Updater
+  def initialize(config_path)
+    config = YAML.load_file(config)
+    fpath = config["fpath"]
+    @resources = fpath["resources"]
+    @accessions = fpath["sra_accessions"]
+    @run_members = fpath["sra_run_members"]
+    @publication = fpath["publication"]
+    @publication_url = fpath["publication_url"]
+    @ncbi_ftp = fpath["ncbi_ftp"]
+    @now = Time.now.strftime("%Y%m%d%H%M%S")
   end
   
-  def get_accessions
-#    if File.exist?(@accessions)
-#      now = "#{Time.now.strftime("%m%d%H%M%S")}"
-#      FileUtils.mv(@accessions, "#{@prev_dir}/SRA_Accessions_#{now}.tab")
-#    end
-#    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
-    open(@accessions).readlines
+  def update_accessions
+    FileUtils.mv(@accessions, File.join(@resources, "Acc.#{@now}")) if File.exist?(@accessions)
+    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Accessions.tab"`
   end
   
-  def get_run_members
-#    if File.exist?(@run_members)
-#      now = "#{Time.now.strftime("%m%d%H%M%S")}"
-#      FileUtils.mv(@run_members, "#{@prev_dir}/SRA_Run_Members_#{now}.tab")
-#    end
-#    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
-    open(@run_members).readlines
+  def update_run_members
+    FileUtils.mv(@run_members, File.join(@resources, "RMem.#{@now}")) if File.exist?(@run_members)
+    `lftp -c "open #{@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab"`
   end
 
-  def get_paperpublished_subid
-    if File.exist?(@publication)
-      now = "#{Time.now.strftime("%m%d%H%M%S")}"
-      FileUtils.mv(@publication, "#{@prev_dir}/publication_#{now}.tab")
-    end
-    publication_url =  "http://sra.dbcls.jp/cgi-bin/publication2.php"
+  def update_publication
+    FileUtils.mv(@publication, File.join(@resources, "pub.#{@now}")) if File.exist?(@publication)
     `wget -O #{@publication} #{publication_url}`
+  end
+
+  def publication_parser
     pub_parsed = SRAsJSONParser.new(@publication)
     pub_parsed.all_subid
   end
