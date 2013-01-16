@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # updates sraid db
-# status code
-# available: 0
 
 require "groonga"
 require "yaml"
@@ -148,11 +146,11 @@ class SRARun
 end
 
 def mess(message)
-  puts Time.now.to_s + "\s" + message
+  puts Time.now.to_s + "\t" + message
 end
 
 if __FILE__ == $0
-  config_path = File.expand_path(File.dirname(__FILE__)) + "/config.yaml"
+  config_path = File.join(File.expand_path(File.dirname(__FILE__)), "config.yaml")
   config = YAML.load_file(config_path)
   
   Groonga::Context.default_options = { encoding: :utf8 }
@@ -221,6 +219,11 @@ opetions
     you are watching me.
 EOS
     puts text
-  else
+  
+  when "--debug"
+    require "ap"
+    Groonga::Database.open(db_path)
+    db = Groonga["SRAIDs"]
+    ap db[0..10]
   end
 end
