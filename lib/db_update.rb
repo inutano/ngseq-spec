@@ -75,6 +75,10 @@ class Updater
     self.run_members
     self.publication
   end
+  
+  def self.runids
+    `grep '^.RR' #{@@accessions} | grep live | cut -f 1`.split("\n")
+  end
 end
 
 class SRARun
@@ -162,6 +166,7 @@ if __FILE__ == $0
   when "--update"
     mess "connecting DB.."
     Groonga::Database.open(db_path)
+    db = Groonga["SRAIDs"]
     mess "done."
     
     if ARGV[1] != "--manual"
@@ -171,130 +176,53 @@ if __FILE__ == $0
       mess "done."
     end
     
+    SRARun.load_files(config_path)
+    
     mess "checking latest submissions.."
+    latest_submissions = Updater.runids
+    not_recorded = Parallel.map(latest_submissions){|id| db[id] }.select{|id| id }
     mess "done."
     
-    mess "insert submissions.."
+    mess "making inserts.."
+    inserts = Parallel.map(not_recorded) do |id|
+      SRARun.new(id).insert
+    end
     mess "done."
     
-    mess ""
-    mess
+    mess "insert records into db.."
+    Parallel.each(inserts) do |insert|
+      add_record(insert)
+    end
+    mess "done."
+    
+    mess "db updated."
+    puts "total number of records: " + db.size.to_s
+    puts "available: " + db.select{|r| r.status == 0 }.size.to_s
+    puts "done: " + db.select{|r| r.status == 2 }.size.to_s
+    puts "controlled access: " + db.select{|r| r.status == 1 }.size.to_s
     
   when "--help"
-  end
+    text = <<EOS
+db_update.rb ver. 0.1 2013.01.16
+
+synopsis
+  ruby db_update.rb <option>
   
-  puts "initializing updater.. #{Time.now}"
-  updater = Update.new
-  
-  puts "checking newly submitted.. #{Time.now}"
-  recorded = SRAID.all.map(&:runid)
-  list_parsed = updater.get_accessions.map{|l| l.split("\t") }
-  live_on_ftp = list_parsed.select do |line|
-    id = line[0]
-    status = line[2]
-    id =~ /^.RR/ && status == "live"
-  end
-  newly_submitted = live_on_ftp.delete_if do |line|
-    runid = line.first
-    recorded.include?(runid)
-  end
-  puts "number of newly submitted: #{newly_submitted.length}"
-  
-  puts "inserting new records.. #{Time.now}"
-  SRAID.transaction do
-    begin
-      newly_submitted.each do |line|
-        insert = { paper: false,
-                   runid: line[0],
-                   subid: line[1],
-                   studyid: line[12],
-                   expid: line[10],
-                   sampleid: line[11],
-                   status: "available"
-                 }
-        SRAID.create(insert)
-      end
-    rescue ActiveRecord::StatementInvalid
-      puts "STATEMENT INVALID: trying again.."
-      retry
-    end
-  end
-  puts "done."
-  
-  puts "checking status changed items.. #{Time.now}"
-  missed_runid = SRAID.missing.map(&:runid) + SRAID.reported.map(&:runid)
-  if not missed_runid.empty?
-    live_runid_on_ftp = live_on_ftp.map{|l| l.first }
-    status_changed_runid = missed_runid.select do |runid|
-      live_runid_on_ftp.include?(runid)
-    end
+opetions
+  --up
+    create groonga db, table and schema.
+    
+  --update
+    update accessions and run_members table file, publication list.
+    add new records into db.
+    
+  --update --manual
+    does not update table files, just calculate ids not inserted and put them into db.
+    
+  --help
+    you are watching me.
+    EOS
+    puts text
   else
-    status_changed_runid = []
   end
-  puts "number of status changed: #{status_changed_runid.length}"
-  
-  puts "updating.."
-  SRAID.transaction do
-    begin
-      status_changed_runid.each do |runid|
-        record = SRAID.find_by_runid(runid)
-        record.status = "available"
-        record.save
-      end
-    rescue ActiveRecord::StatementInvalid
-      puts "STATEMENT INVALID: trying again.."
-      retry
-    end
-  end
-  puts "done."
-  
-  puts "checking items under the controlled access.. #{Time.now}"
-  controlled_access = live_on_ftp.select{|l| l[8] == "controlled_access" }
-  puts "number of controlled access: #{controlled_access.length}"
-  
-  puts "updating.. #{Time.now}"
-  SRAID.transaction do
-    begin
-      controlled_access.each do |line|
-        runid = line.first
-        record = SRAID.find_by_runid(runid)
-        if not record.status == "controlled"
-          record.status = "controlled"
-          record.save
-        end
-      end
-    rescue ActiveRecord::StatementInvalid
-      puts "STATEMENT INVALID: trying again.."
-      retry
-    end
-  end
-  puts "done."
-  
-  
-  puts "checking data which has published article.. #{Time.now}"
-  paperpublished_subid = updater.get_paperpublished_subid
-  puts "number of paper-published items (submission id) #{paperpublished_subid.length}"
-  
-  puts "updating.. #{Time.now}"
-  SRAID.transaction do
-    begin
-      paperpublished_subid.each do |subid|
-        record = SRAID.find_by_subid(subid)
-        if record && record.paper != true
-          record.paper = true
-          record.save
-        end
-      end
-    rescue ActiveRecord::StatementInvalid
-      puts "STATEMENT INVALID: trying again.."
-      retry
-    end
-  end
-  puts "done."
-  
-  puts "DB is up-to-date. #{Time.now}"
-  num_a = SRAID.available.length
-  num_d = SRAID.done.length
-  num_c = SRAID.controlled.length
-  puts "available: #{num_a}, done: #{num_d}, controlled: #{num_c}"
 end
