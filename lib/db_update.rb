@@ -6,6 +6,8 @@ require "yaml"
 require "open-uri"
 require "parallel"
 
+require "ap"
+
 def create_db(db_path)
   Groonga::Database.create(:path => db_path)
   
@@ -41,8 +43,8 @@ def add_record(insert)
 end
 
 class Updater
-  def load_files(config_path)
-    config = YAML.load_file(config)
+  def self.load_files(config_path)
+    config = YAML.load_file(config_path)
     fpath = config["fpath"]
     @@resources = fpath["resources"]
     @@ncbi_ftp = fpath["ncbi_ftp"]
@@ -80,8 +82,8 @@ class Updater
 end
 
 class SRARun
-  def load_files(config_path)
-    config = YAML.load_file(config)
+  def self.load_files(config_path)
+    config = YAML.load_file(config_path)
     fpath = config["fpath"]
     @@resources = fpath["resources"]
     @@result = fpath["result"]
@@ -113,20 +115,20 @@ class SRARun
   
   def status
     accessibility = `grep -m 1 #{@runid} #{@@accessions} | cut -f 9`.chomp
-    result_path = File.join(@result, @runid.slice(0..5), @runid)
+    result_path = File.join(@@result, @runid.slice(0..5), @runid)
     
     if accessibility == "controlled_access"
       #controlled
-      1
+      2
     elsif !File.exist?(result_path)
       # available
-      0
+      1
     elsif !Dir.entries(result_path).select{|f| f =~ /#{@runid}/ }.empty?
       # done
-      2
+      3
     else
       # available
-      0
+      1
     end
   end
   
@@ -161,13 +163,15 @@ if __FILE__ == $0
 
   when "--update"
     mess "connecting DB.."
-    Groonga::Database.open(db_path)
+    Groonga::Database.open(config["db_path"])
     db = Groonga["SRAIDs"]
     mess "done."
     
+    Updater.load_files(config_path)
+
     if ARGV[1] != "--manual"
       mess "updating ID table files.."
-      Updater.load_files(config_path)
+      
       Updater.all_files
       mess "done."
     end
@@ -175,12 +179,16 @@ if __FILE__ == $0
     SRARun.load_files(config_path)
     
     mess "checking latest submissions.."
-    latest_submissions = Updater.runids
-    not_recorded = Parallel.map(latest_submissions){|id| db[id] }.select{|id| id }
+    latest_submissions = Updater.runids[0..999]
+    not_recorded = Parallel.map(latest_submissions) do |id|
+      record = db[id]
+      id if !record
+    end
+    recording_list = not_recorded.select{|id| id }
     mess "done."
     
     mess "making inserts.."
-    inserts = Parallel.map(not_recorded) do |id|
+    inserts = Parallel.map(recording_list) do |id|
       SRARun.new(id).insert
     end
     mess "done."
@@ -193,9 +201,9 @@ if __FILE__ == $0
     
     mess "db updated."
     puts "total number of records: " + db.size.to_s
-    puts "available: " + db.select{|r| r.status == 0 }.size.to_s
-    puts "done: " + db.select{|r| r.status == 2 }.size.to_s
-    puts "controlled access: " + db.select{|r| r.status == 1 }.size.to_s
+    puts "available: " + db.select{|r| r.status == 1 }.size.to_s
+    puts "done: " + db.select{|r| r.status == 3 }.size.to_s
+    puts "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
     
   when "--help"
     text = <<EOS
@@ -221,9 +229,16 @@ EOS
     puts text
   
   when "--debug"
-    require "ap"
-    Groonga::Database.open(db_path)
+    #require "ap"
+    Groonga::Database.open(config["db_path"])
     db = Groonga["SRAIDs"]
-    ap db[0..10]
+    ap db.map{|r| [r.key, r.subid, r.status, r.paper] }
+    
+    ap db.select{|r| r.status == 1 }.map{|r| r.key.key }
+
+    puts "total number of records: " + db.size.to_s
+    puts "available: " + db.select{|r| r.status == 1 }.size.to_s
+    puts "done: " + db.select{|r| r.status == 3 }.size.to_s
+   puts "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
   end
 end
