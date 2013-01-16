@@ -147,8 +147,6 @@ class SRARun
   end
 end
 
-class 
-
 def mess(message)
   puts Time.now.to_s + "\s" + message
 end
@@ -221,7 +219,7 @@ opetions
     
   --help
     you are watching me.
-    EOS
+EOS
     puts text
   else
   end
