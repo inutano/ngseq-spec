@@ -56,17 +56,17 @@ class Updater
   end
   
   def self.accessions
-    FileUtils.mv(@@accessions, File.join(@@resources, "/Acc.#{@@now}")) if File.exist?(@@accessions)
+    FileUtils.mv(@@accessions, File.join(@@resources, "Acc.#{@@now}")) if File.exist?(@@accessions)
     `lftp -c "open #{@@ncbi_ftp} && pget -n 8 SRA_Accessions.tab -o #{@@accessions}"`
   end
   
   def self.run_members
-    FileUtils.mv(@@run_members, File.join(@@resources, "/RMem.#{@@now}")) if File.exist?(@@run_members)
+    FileUtils.mv(@@run_members, File.join(@@resources, "RMem.#{@@now}")) if File.exist?(@@run_members)
     `lftp -c "open #{@@ncbi_ftp} && pget -n 8 SRA_Run_Members.tab -o #{@@run_members}"`
   end
 
   def self.publication
-    FileUtils.mv(@@publication, File.join(@@resources, "/pub.#{@@now}")) if File.exist?(@@publication)
+    FileUtils.mv(@@publication, File.join(@@resources, "pub.#{@@now}")) if File.exist?(@@publication)
     `wget -O #{@@publication} #{@@publication_url}`
   end
   
@@ -85,10 +85,8 @@ class SRARun
     @@result = fpath["result"]
     @@accessions = fpath["sra_accessions"]
     @@run_members = fpath["sra_run_members"]
-    @@publication = fpath["publication"]
-    @@publication_url = fpath["publication_url"]
-    @@ncbi_ftp = fpath["ncbi_ftp"]
-    @@now = Time.now.strftime("%Y%m%d%H%M%S")
+    publication = fpath["publication"]
+    @@published = open(publication){|f| JSON.load(f)}["ResultSet"]["Result"].map{|r| r["sraid"] }.uniq
   end
 
   def initialize(runid)
@@ -96,23 +94,23 @@ class SRARun
   end
   
   def subid
-    `grep -m 1 #{@runid} #{@accessions} | cut -f 2`.chomp
+    `grep -m 1 #{@runid} #{@@accessions} | cut -f 2`.chomp
   end
   
   def studyid
-    `grep -m 1 #{@runid} #{@run_members} | cut -f 5`.chomp
+    `grep -m 1 #{@runid} #{@@run_members} | cut -f 5`.chomp
   end
   
   def expid
-    `grep -m 1 #{@runid} #{@run_members} | cut -f 3`.chomp
+    `grep -m 1 #{@runid} #{@@run_members} | cut -f 3`.chomp
   end
   
   def sampleid
-    `grep -m 1 #{@runid} #{@run_members} | cut -f 4`.chomp
+    `grep -m 1 #{@runid} #{@@run_members} | cut -f 4`.chomp
   end
   
   def status
-    accessibility = `grep -m 1 #{@runid} #{@accessions} | cut -f 9`.chomp
+    accessibility = `grep -m 1 #{@runid} #{@@accessions} | cut -f 9`.chomp
     result_path = File.join(@result, @runid.slice(0..5), @runid)
     
     if accessibility == "controlled_access"
@@ -131,8 +129,7 @@ class SRARun
   end
   
   def paper
-    json = open(@publication){|f| JSON.load(f) }
-    sraids
+    @@published.include?(self.subid)
   end
   
   def insert
@@ -143,11 +140,6 @@ class SRARun
       sampleid: self.sampleid,
       status: self.status,
       paper: self.paper }
-  end
-
-  def publication_parser
-    pub_parsed = SRAsJSONParser.new(@publication)
-    pub_parsed.all_subid
   end
 end
 
