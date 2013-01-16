@@ -179,7 +179,7 @@ if __FILE__ == $0
     SRARun.load_files(config_path)
     
     mess "checking latest submissions.."
-    latest_submissions = Updater.runids[0..999]
+    latest_submissions = Updater.runids
     not_recorded = Parallel.map(latest_submissions) do |id|
       record = db[id]
       id if !record
