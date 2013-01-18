@@ -6,8 +6,6 @@ require "yaml"
 require "open-uri"
 require "parallel"
 
-require "ap"
-
 def create_db(db_path)
   Groonga::Database.create(:path => db_path)
   
@@ -90,9 +88,9 @@ class SRARun
     @@accessions = fpath["sra_accessions"]
     @@run_members = fpath["sra_run_members"]
     publication = fpath["publication"]
-    @@published = open(publication){|f| JSON.load(f)}["ResultSet"]["Result"].map{|r| r["sraid"] }.uniq
+    @@published = open(publication){|f| JSON.load(f)}["ResultSet"]["Result"].map{|r| r["sra_id"] }.uniq
   end
-
+  
   def initialize(runid)
     @runid = runid
   end
@@ -188,8 +186,12 @@ if __FILE__ == $0
     mess "done."
     
     mess "making inserts.."
-    inserts = Parallel.map(recording_list) do |id|
-      SRARun.new(id).insert
+    begin
+      inserts = Parallel.map(recording_list) do |id|
+        SRARun.new(id).insert
+      end
+    rescue => e
+      mess e.to_s
     end
     mess "done."
     
@@ -200,10 +202,12 @@ if __FILE__ == $0
     mess "done."
     
     mess "db updated."
-    puts "total number of records: " + db.size.to_s
-    puts "available: " + db.select{|r| r.status == 1 }.size.to_s
-    puts "done: " + db.select{|r| r.status == 3 }.size.to_s
-    puts "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
+    mess "total number of records: " + db.size.to_s
+    mess "available: " + db.select{|r| r.status == 1 }.size.to_s
+    mess "done: " + db.select{|r| r.status == 3 }.size.to_s
+    mess "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
+    
+    mess "paper published: " + db.select{|r| r.paper == true }.size.to_s
     
   when "--help"
     text = <<EOS
@@ -232,13 +236,13 @@ EOS
     #require "ap"
     Groonga::Database.open(config["db_path"])
     db = Groonga["SRAIDs"]
-    ap db.map{|r| [r.key, r.subid, r.status, r.paper] }
+    ap db.map{|r| [r.key, r.subid, r.status, r.paper, ] }[0..10]
     
-    ap db.select{|r| r.status == 1 }.map{|r| r.key.key }
-
+    ap db.select{|r| r.status == 1 }.map{|r| r.key.key }[0..10]
+    
     puts "total number of records: " + db.size.to_s
     puts "available: " + db.select{|r| r.status == 1 }.size.to_s
     puts "done: " + db.select{|r| r.status == 3 }.size.to_s
-   puts "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
+    puts "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
   end
 end
