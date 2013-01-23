@@ -65,7 +65,7 @@ if __FILE__ == $0
   case ARGV.first
   when "--transfer"
     db = Groonga["SRAIDs"]
-#    loop do
+    loop do
       mess "begin transmission"
       available = db.select{|r| r.status == 1 }.map{|r| r }
       to_be_processed = available[0..15]
@@ -110,7 +110,12 @@ if __FILE__ == $0
           mess "success! #{hash[:record].key.key}"
         end
       end
-#    end
+      
+      
+      
+      mess "sleep 10sec"
+      sleep 10
+    end
 
   when "--fastqc"
   
