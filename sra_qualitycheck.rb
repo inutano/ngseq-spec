@@ -16,7 +16,7 @@ class Filecheck
   @@base_path = "/usr/local/ftp/ddbj_database/dra/fastq"
 
   def initialize(record)
-    @runid = record.runid
+    @runid = record.key.key
     @subid = record.subid
     @expid = record.expid
     @fpath = File.join(@@base_path, @subid.slice(0..5), @subid, @expid)
@@ -25,7 +25,7 @@ class Filecheck
   
   def files
     if File.exist?(@fpath)
-      flist = !Dir.entries(@fpath).select{|f| f =~ /#{@runid}/ }
+      flist = Dir.entries(@fpath).select{|f| f =~ /#{@runid}/ }
       flist if !flist.empty?
     end
   end
@@ -34,19 +34,28 @@ end
 class Ptransfer
   def self.load_files(config_path)
     config = YAML.load_file(config_path)
-    @@base_path = config["dra_fq_path"]
     @@data_dir = config["data_dir"]
   end
   
   def self.each(fpath_array)
     threads = []
-    fpath_array.each do |fpath|
+    fpath_array.each do |id_fpath|
+      runid = id_fpath[:runid]
+      fpath = id_fpath[:fpath]
+      
       th = Thread.new do
-        files = Dir.entries(fpath).select{|f| f =~ /^#{runid}/ }.map{|fq| File.join(fpath, fq)}
-        FileUtils.cp(files, data_dir)
+        files = Dir.entries(fpath).select{|f| f =~ /^#{runid}/ }.map{|fq| File.join(fpath, fq) }
+        
+        ap files
+        
+        FileUtils.cp(files, @@data_dir)
       end
+      
+      ap th
+      
       threads << th
     end
+    mess "copying.."
     threads.each{|th| th.join }
   end
 end
@@ -66,8 +75,6 @@ if __FILE__ == $0
       available = db.select{|r| r.status == 1 }.map{|r| r }
       to_be_processed = available[0..15]
       
-      ap to_be_processed
-
       if to_be_processed.empty?
         mess "all available entries calcurated!"
         exit
@@ -85,44 +92,54 @@ if __FILE__ == $0
         
         { record: record, files: files, path: path }
       end
-      
-      file_notfound = file_status.delete_if{|h| h[:files] }.map{|h| h[:record] }
+
+      file_notfound = file_status.select{|h| !h[:files] }.map{|h| h[:record] }
       file_notfound.each do |record|
         # file not found => missing
         
-        ap "file not found"
-        ap record.runid
-        
         record.status = 4
+
+        ap "file not found"
+        ap record.key.key
+        ap record.status
       end
+      
+      ap file_status
       
       file_exist = file_status.select{|h| h[:files] }
       
       ap file_exist
       
-      fpath_array = file_exist.map{|h| h[:path] }
+      fpath_array = file_exist.map do |hash|
+        { runid: hash[:record].key.key,
+          fpath: hash[:path] }
+      end
       
       ap fpath_array
       
+      Ptransfer.load_files(config_path)
       Ptransfer.each(fpath_array)
       
       data_dir = config["data_dir"]
       files_downloaded = Dir.entries(data_dir)
       
-      ap files_downloaded
+      ap files_downloaded.sort_by{|f| f }
       
       file_exist.each do |hash|
-        id = hash[:record].runid
-        if files_downloaded.select{|f| f =~ /#{id}/}.empty?
+        id = hash[:record].key.key
+        ap id 
+        if files_downloaded.select{|f| f =~ /#{id}/ }.empty?
           # failed to download => missing
           
-          ap "downloaded " + hash[:files]
+          ap "failed"
+          ap hash[:files]
           
           hash[:record].status = 4
         else
           # done
           
-          ap "missing or failed " + hash[:files]
+          ap "downloaded"
+          ap hash[:files]
           
           hash[:record].status = 3
         end
@@ -130,5 +147,22 @@ if __FILE__ == $0
 #    end
 
   when "--fastqc"
+  
+  when "--debug"
+    db = Groonga["SRAIDs"]
+    
+    #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
+    array = []
+    array.each do |id|
+      rec = db[id]
+      rec.status = 1
+      ap rec.key
+      ap rec.status
+    end
+
+    ap "available: " + db.select{|r| r.status == 1 }.size.to_s
+    ap "controlled: " + db.select{|r| r.status == 2 }.size.to_s
+    ap "downloaded: " + db.select{|r| r.status == 3 }.size.to_s
+    ap "missing: " + db.select{|r| r.status == 4 }.size.to_s
   end
 end
