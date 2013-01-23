@@ -34,25 +34,20 @@ end
 class Ptransfer
   def self.load_files(config_path)
     config = YAML.load_file(config_path)
-    @@data_dir = config["data_dir"]
+    @@download = config["download_path"]
   end
   
-  def self.each(fpath_array)
+  def self.each(hash_array)
     threads = []
-    fpath_array.each do |id_fpath|
-      runid = id_fpath[:runid]
-      fpath = id_fpath[:fpath]
+    hash_array.each do |hash|
+      runid = hash[:record].key.key
+      fpath = hash[:fpath]
       
       th = Thread.new do
         files = Dir.entries(fpath).select{|f| f =~ /^#{runid}/ }.map{|fq| File.join(fpath, fq) }
-        
-        ap files
-        
-        FileUtils.cp(files, @@data_dir)
+        FileUtils.cp(files, @@download)
       end
-      
-      ap th
-      
+
       threads << th
     end
     mess "copying.."
@@ -83,65 +78,36 @@ if __FILE__ == $0
       file_status = to_be_processed.map do |record|
         fc = Filecheck.new(record)
         files = fc.files
-        
-        ap files
-        
-        path = fc.fpath
-        
-        ap path
-        
-        { record: record, files: files, path: path }
+        fpath = fc.fpath
+        { record: record, files: files, fpath: fpath }
       end
 
-      file_notfound = file_status.select{|h| !h[:files] }.map{|h| h[:record] }
-      file_notfound.each do |record|
-        # file not found => missing
-        
+      file_notfound = file_status.select{|h| !h[:files] }
+      file_notfound.each do |hash|
+        # file not found => missing 4
+        record = hash[:record]
         record.status = 4
-
-        ap "file not found"
-        ap record.key.key
-        ap record.status
+        mess "file not found: #{hash[:record].key.key} at #{hash[:fpath]}"
       end
-      
-      ap file_status
       
       file_exist = file_status.select{|h| h[:files] }
       
-      ap file_exist
-      
-      fpath_array = file_exist.map do |hash|
-        { runid: hash[:record].key.key,
-          fpath: hash[:path] }
-      end
-      
-      ap fpath_array
-      
       Ptransfer.load_files(config_path)
-      Ptransfer.each(fpath_array)
+      Ptransfer.each(file_exist)
       
-      data_dir = config["data_dir"]
-      files_downloaded = Dir.entries(data_dir)
-      
-      ap files_downloaded.sort_by{|f| f }
+      download_path = config["download_path"]
+      files_downloaded = Dir.entries(download_path)
       
       file_exist.each do |hash|
         id = hash[:record].key.key
-        ap id 
         if files_downloaded.select{|f| f =~ /#{id}/ }.empty?
           # failed to download => missing
-          
-          ap "failed"
-          ap hash[:files]
-          
           hash[:record].status = 4
+          mess "download failed: #{hash[:record].key.key} at #{hash[:fpath]}"
         else
           # done
-          
-          ap "downloaded"
-          ap hash[:files]
-          
           hash[:record].status = 3
+          mess "success! #{hash[:record].key.key}"
         end
       end
 #    end
@@ -152,9 +118,9 @@ if __FILE__ == $0
     db = Groonga["SRAIDs"]
     
     #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
-    array = []
+    array = open("./list").readlines
     array.each do |id|
-      rec = db[id]
+      rec = db[id.chomp]
       rec.status = 1
       ap rec.key
       ap rec.status
