@@ -35,6 +35,7 @@ class Ptransfer
   def self.load_files(config_path)
     config = YAML.load_file(config_path)
     @@download = config["download_path"]
+    @@data = config["data_path"]
   end
   
   def self.each(hash_array)
@@ -52,6 +53,12 @@ class Ptransfer
     end
     mess "copying.."
     threads.each{|th| th.join }
+  end
+  
+  def self.flush
+   downloaded = Dir.entries(@@download).select{|f| f !~ /^\./ }
+   files = downloaded.map{|f| File.join(@@download, f) }
+   FileUtils.mv(files, @@data)
   end
 end
 
@@ -111,7 +118,7 @@ if __FILE__ == $0
         end
       end
       
-      
+      Ptransfer.flush
       
       mess "sleep 10sec"
       sleep 10
