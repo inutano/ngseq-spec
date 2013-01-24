@@ -65,9 +65,15 @@ end
 def running_fastqc(runid, fpath, config_path)
   config = YAML.load_file(config_path)
   log = File.join(config["log_path"], runid + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
-  qub = config["qsub_path"]
+  qsub = config["qsub_path"]
   lib_path = config["lib_path"]
   `#{qsub} -N #{runid} -o #{log} #{lib_path}/fastqc.sh #{runid} #{fpath} #{config_path}`
+end
+
+def capacity  
+end
+
+def job_limit
 end
 
 if __FILE__ == $0
@@ -151,10 +157,14 @@ if __FILE__ == $0
         runid = file.slice(0..8)
         fpath = File.join(data_path, file)
         running_fastqc(runid, fpath, config_path)
-        
+        mess "running fastqc, #{runid} at #{fpath}"
         record = db[runid]
         record.status = 5
       end
+      
+      mess "finish throwing jobs, sleep 10sec"
+      sleep 10
+      
     end
     
   when "--validate"
