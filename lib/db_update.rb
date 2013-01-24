@@ -123,7 +123,7 @@ class SRARun
       1
     elsif !Dir.entries(result_path).select{|f| f =~ /#{@runid}/ }.empty?
       # done
-      3
+      6
     else
       # available
       1
@@ -204,8 +204,8 @@ if __FILE__ == $0
     mess "db updated."
     mess "total number of records: " + db.size.to_s
     mess "available: " + db.select{|r| r.status == 1 }.size.to_s
-    mess "done: " + db.select{|r| r.status == 3 }.size.to_s
     mess "controlled access: " + db.select{|r| r.status == 2 }.size.to_s
+    mess "done: " + db.select{|r| r.status == 6 }.size.to_s
     
     mess "paper published: " + db.select{|r| r.paper == true }.size.to_s
     
