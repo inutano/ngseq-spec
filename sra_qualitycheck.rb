@@ -136,26 +136,48 @@ if __FILE__ == $0
 
   when "--fastqc"
     loop do
+      db = Groonga["SRAIDs"]
       data_path = config["data_path"]
-      to_be_processed = Dir.entries(data_path).select{|f| f =~ /^.RR/ }
-    
+      
+      to_be_processed = Dir.entries(data_path).select do |file|
+        runid = file.slice(0..8)
+        record = db[runid]
+        if record
+          record.status != 5
+        end
+      end
+      
       to_be_processed.each do |file|
         runid = file.slice(0..8)
         fpath = File.join(data_path, file)
         running_fastqc(runid, fpath, config_path)
+        
+        record = db[runid]
+        record.status = 5
       end
+    end
     
   when "--validate"
     db = Groonga["SRAIDs"]
+    qc_processed = db.select{|record| record.status == 3 }
+    
+    qc_processed.each do |record|
+      runid = record.key.key
+      zip_path = File.join(config["result_path"], runid.slice(0..5), runid)
+      if !File.exist?(zip_path)
+        ap "file not found"
+        ap zip_path
+      end
+    end
   
   when "--debug"
     db = Groonga["SRAIDs"]
     
-    #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
-    array = open("./list").readlines
+    array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
+    #array = open("./list").readlines
     array.each do |id|
-      rec = db[id.chomp]
-      rec.status = 1
+      rec = db[id]
+      #rec.status = 1
       ap rec.key
       ap rec.status
     end
@@ -166,3 +188,4 @@ if __FILE__ == $0
     ap "missing: " + db.select{|r| r.status == 4 }.size.to_s
   end
 end
+ 
