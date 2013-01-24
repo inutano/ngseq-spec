@@ -37,13 +37,13 @@ case "${fpath}" in
 
   *.gz )
     fastqc="${fastqc_path} --noextract --outdir ${result_dir} ${fpath}"
-    cleaning="rm -fr ${unarchived}"
-    ${fastqc_command} && ${cleaning} || (echo "fastqc failed: ${fpath}" && ${cleaning}) ;;
+    cleaning="rm -fr ${fpath}"
+    ${fastqc} && ${cleaning} || (echo "fastqc failed: ${fpath}" && ${cleaning}) ;;
 
   *.fastq )
     fastqc="${fastqc_path} --noextract --outdir ${result_dir} ${fpath}"
-    cleaning="rm -fr ${unarchived}"
-    ${fastqc_command} && ${cleaning} || (echo "fastqc failed: ${fpath}" && ${cleaning}) ;;
+    cleaning="rm -fr ${fpath}"
+    ${fastqc} && ${cleaning} || (echo "fastqc failed: ${fpath}" && ${cleaning}) ;;
 
   * )
     echo "failed: unknown file type" && exit 1 ;;
