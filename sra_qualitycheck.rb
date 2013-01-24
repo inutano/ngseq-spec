@@ -184,11 +184,13 @@ if __FILE__ == $0
     
     #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
     #array = open("./list").readlines
-    #array = db.select{|rec| rec.status == 3 }
-    array = []
-    array.each do |id|
-      record = db[id.chomp]
-      record.status = 3
+    array = db.select{|rec| rec.status == 5 }
+    #array = open("./list2").readlines
+    array.each do |node|
+      #record = db[node.chomp]
+      #record.status = 3
+      ap node.key.key
+      node.status = 1
     end
     
     ap "available: " + db.select{|r| r.status == 1 }.size.to_s
