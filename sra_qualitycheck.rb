@@ -67,7 +67,7 @@ def running_fastqc(runid, fpath, config_path)
   log = File.join(config["log_path"], runid + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
   qub = config["qsub_path"]
   lib_path = config["lib_path"]
-  `#{qsub} -N #{runid} -o #{log} #{lib_path}/fastqc.sh #{fpath}`
+  `#{qsub} -N #{runid} -o #{log} #{lib_path}/fastqc.sh #{runid} #{fpath} #{config_path}`
 end
 
 if __FILE__ == $0
@@ -135,9 +135,18 @@ if __FILE__ == $0
     end
 
   when "--fastqc"
-    data_path = config["data_path"]
+    loop do
+      data_path = config["data_path"]
+      to_be_processed = Dir.entries(data_path).select{|f| f =~ /^.RR/ }
     
+      to_be_processed.each do |file|
+        runid = file.slice(0..8)
+        fpath = File.join(data_path, file)
+        running_fastqc(runid, fpath, config_path)
+      end
     
+  when "--validate"
+    db = Groonga["SRAIDs"]
   
   when "--debug"
     db = Groonga["SRAIDs"]
