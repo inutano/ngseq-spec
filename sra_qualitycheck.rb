@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# status code:
-# available: 1, controlled: 2, done: 3, missing: 4
+# record status:
+# available: 1, controlled 2, downloaded 3, missing 4, processing 5, done 6
 
 require "groonga"
 require "yaml"
@@ -128,7 +128,7 @@ if __FILE__ == $0
           hash[:record].status = 4
           mess "download failed: #{hash[:record].key.key} at #{hash[:fpath]}"
         else
-          # done
+          # downloaded
           hash[:record].status = 3
           mess "success! #{hash[:record].key.key}"
         end
@@ -164,12 +164,11 @@ if __FILE__ == $0
       
       mess "finish throwing jobs, sleep 10sec"
       sleep 10
-      
     end
     
   when "--validate"
     db = Groonga["SRAIDs"]
-    qc_processed = db.select{|record| record.status == 3 }
+    qc_processed = db.select{|record| record.status == 5 }
     
     qc_processed.each do |record|
       runid = record.key.key
@@ -183,19 +182,21 @@ if __FILE__ == $0
   when "--debug"
     db = Groonga["SRAIDs"]
     
-    array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
+    #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
     #array = open("./list").readlines
+    #array = db.select{|rec| rec.status == 3 }
+    array = []
     array.each do |id|
-      rec = db[id]
-      #rec.status = 1
-      ap rec.key
-      ap rec.status
+      record = db[id.chomp]
+      record.status = 3
     end
-
+    
     ap "available: " + db.select{|r| r.status == 1 }.size.to_s
     ap "controlled: " + db.select{|r| r.status == 2 }.size.to_s
     ap "downloaded: " + db.select{|r| r.status == 3 }.size.to_s
     ap "missing: " + db.select{|r| r.status == 4 }.size.to_s
+    ap "processing: " + db.select{|r| r.status == 5 }.size.to_s
+    ap "done: " + db.select{|r| r.status == 6 }.size.to_s
   end
 end
  
