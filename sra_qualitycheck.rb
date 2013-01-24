@@ -62,6 +62,14 @@ class Ptransfer
   end
 end
 
+def running_fastqc(runid, fpath, config_path)
+  config = YAML.load_file(config_path)
+  log = File.join(config["log_path"], runid + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
+  qub = config["qsub_path"]
+  lib_path = config["lib_path"]
+  `#{qsub} -N #{runid} -o #{log} #{lib_path}/fastqc.sh #{fpath}`
+end
+
 if __FILE__ == $0
   config_path = File.join(File.expand_path(File.dirname(__FILE__)), "lib", "config.yaml")
   config = YAML.load_file(config_path)
@@ -72,7 +80,9 @@ if __FILE__ == $0
   case ARGV.first
   when "--transfer"
     db = Groonga["SRAIDs"]
-    loop do
+    
+    #loop do
+    20.times do
       mess "begin transmission"
       available = db.select{|r| r.status == 1 }.map{|r| r }
       to_be_processed = available[0..15]
@@ -125,6 +135,9 @@ if __FILE__ == $0
     end
 
   when "--fastqc"
+    data_path = config["data_path"]
+    
+    
   
   when "--debug"
     db = Groonga["SRAIDs"]
