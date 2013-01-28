@@ -1,4 +1,4 @@
-#$ -S /bin/bash -j y -l mem_req=8G,s_vmem=8G -pe def_slot 1
+#$ -S /bin/bash -j y -l mem_req=16G,s_vmem=16G -pe def_slot 1
 # fastqc_fq.sh <runid> <fpath> <config_path>
 
 runid=$1
@@ -11,6 +11,13 @@ data_path=`grep "^data_path" ${config_path} | cut -d '"' -f 2`
 result_path=`grep "^result_path" ${config_path} | cut -d '"' -f 2`
 runid_head=`echo ${runid} | sed -e 's:.\{3\}$::'`
 result_dir="${result_path}/${runid_head}/${runid}"
+
+result_file=`echo ${fpath} | sed -e 's:^.\+/::g' | sed -e 's:\..\+$:_fastqc.zip:g'`
+result_fpath="${result_dir}/${result_file}"
+
+if [ -e ${result_fpath} ] ; then
+  rm -f ${result_fpath}
+fi
 
 if [ ! -e ${result_dir} ] ; then
   mkdir -p ${result_dir}
