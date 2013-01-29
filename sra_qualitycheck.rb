@@ -76,9 +76,9 @@ class Ptransfer
   end
 end
 
-def running_fastqc(runid, fpath, config_path)
+def running_fastqc(runid, fpath, filename, config_path)
   config = YAML.load_file(config_path)
-  log = File.join(config["log_path"], runid + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
+  log = File.join(config["log_path"], filename + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
   qsub = config["qsub_path"]
   lib_path = config["lib_path"]
   `#{qsub} -N #{runid} -o #{log} #{lib_path}/fastqc.sh #{runid} #{fpath} #{config_path}`
@@ -218,7 +218,7 @@ if __FILE__ == $0
       to_be_processed.each do |file|
         runid = file.slice(0..8)
         fpath = File.join(data_path, file)
-        running_fastqc(runid, fpath, config_path)
+        running_fastqc(runid, fpath, file, config_path)
         mess "running fastqc, #{runid} at #{fpath}"
         record = db[runid]
         record.status = 5
