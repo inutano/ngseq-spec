@@ -1,16 +1,11 @@
-# sample config.yaml for operation.rb
+# config.yaml, current dir is ..
 
-path:
-  lib: /path/to/projectdir/lib
-  data: /path/to/projectdir/data
-  log: /path/to/projectdir/log
-  result: /path/to/projectdir/result
-  accessions: /path/to/projectdir/lib/SRA_Accessions.tab
-  run_members: /path/to/projectdir/SRA_Run_Members.tab
-  fastqc: /path/to/projectdir/lib/fastqc.sh
-
-twitter:
-  consumer_key: <consumer key>
-  consumer_secret: <consumer secret>
-  oauth_token: <oauth token>
-  oauth_token_secret: <oauth token secret>
+db_path: "/path/to/db/sraid.db"
+log_path: "/path/to/log/db.log"
+fpath:
+  resources: "/path/to/resources"
+  sra_accessions: "/path/to/resources/SRA_Accessions.tab"
+  sra_run_members: "/path/to/resources/SRA_Run_Members.tab"
+  publication: "/path/to/resources/publication.json"
+  publication_url: "http://sra.dbcls.jp/cgi-bin/publication2.php"
+  ncbi_ftp: "ftp.ncbi.nlm.nih.gov/sra/reports/Metadata"

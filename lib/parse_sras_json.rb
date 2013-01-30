@@ -3,7 +3,6 @@
 
 require "json"
 require "open-uri"
-require "pp"
 
 class SRAsJSONParser
 	def initialize(json)

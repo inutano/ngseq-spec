@@ -3,7 +3,7 @@
 require "yaml"
 require "twitter"
 
-tw_conf = YAML.load_file("/home/iNut/project/sra_qualitycheck/lib/config.yaml")["twitter"]
+tw_conf = YAML.load_file("#{File.expand_path(File.dirname(__FILE__))}/config.yaml")["twitter"]
 
 Twitter.configure do |config|
   config.consumer_key = tw_conf["consumer_key"]
@@ -14,7 +14,12 @@ end
 
 class ReportStat
   def self.diskusage
-    `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4]
+    # original
+    # `df -h`.split("\n").select{|l| l =~ /home/ }.map{|l| l.split(/\s+/)}.flatten[4]
+    yaml = YAML.load_file("#{File.expand_path(File.dirname(__FILE__))}/config.yaml")
+    data_dir = yaml["path"]["data"]
+    total_size = Dir.entries(data_dir).map{|f| File.exist?("#{data_dir}/#{f}") ? File.size("#{data_dir}/#{f}") : 0 }.reduce(:+)
+    total_size
   end
   
   def self.ftpsession
@@ -22,7 +27,7 @@ class ReportStat
   end
   
   def self.qstat
-    `qstat -u iNut`.split("\n").select{|l| l =~ /^[0-9]/}.length
+    `qstat -u inutano`.split("\n").select{|l| l =~ /^\s+[0-9]/}.length
   end
 end
 
