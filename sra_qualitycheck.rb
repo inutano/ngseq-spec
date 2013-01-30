@@ -70,7 +70,13 @@ class Ptransfer
   end
   
   def self.flush
-   downloaded = Dir.entries(@@download).select{|f| f !~ /^\./ }
+   downloaded = Dir.entries(@@download).select{|f| f !~ /fastq/ }
+   files = downloaded.map{|f| File.join(@@download, f) }
+   FileUtils.mv(files, @@data)
+  end
+
+  def self.flush_sra
+   downloaded = Dir.entries(@@download).select{|f| f !~ /sra/ }
    files = downloaded.map{|f| File.join(@@download, f) }
    FileUtils.mv(files, @@data)
   end
@@ -166,7 +172,7 @@ if __FILE__ == $0
         fpath = fc.fpath_sra
         { record: record, files: files, fpath: fpath }
       end
-
+      
       file_notfound = file_status.select{|h| !h[:files] }
       file_notfound.each do |hash|
         # file not found again => lost 7
@@ -196,7 +202,7 @@ if __FILE__ == $0
         end
       end
       
-      Ptransfer.flush
+      Ptransfer.flush_sra
       
       mess "sleep 10sec"
       sleep 10
@@ -245,7 +251,7 @@ if __FILE__ == $0
     db = Groonga["SRAIDs"]
     
     #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
-    #array = open("./list").readlines
+    #array = open("./list/list_failed").readlines
     #array = open("./error_list").readlines
     #array = open("./list2").readlines
     #array = db.select{|rec| rec.status == 5 }
