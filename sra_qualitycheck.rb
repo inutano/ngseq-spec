@@ -70,13 +70,13 @@ class Ptransfer
   end
   
   def self.flush
-   downloaded = Dir.entries(@@download).select{|f| f !~ /fastq/ }
+   downloaded = Dir.entries(@@download).select{|f| f =~ /fastq/ }
    files = downloaded.map{|f| File.join(@@download, f) }
    FileUtils.mv(files, @@data)
   end
 
   def self.flush_sra
-   downloaded = Dir.entries(@@download).select{|f| f !~ /sra/ }
+   downloaded = Dir.entries(@@download).select{|f| f =~ /sra/ }
    files = downloaded.map{|f| File.join(@@download, f) }
    FileUtils.mv(files, @@data)
   end
