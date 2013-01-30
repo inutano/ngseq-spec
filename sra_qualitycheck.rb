@@ -97,7 +97,7 @@ if __FILE__ == $0
     
     loop do
       mess "begin transmission"
-      available = db.select{|r| r.status == 1 }.map{|r| r }
+      available = db.select{|r| r.status == 1 }.compact
       to_be_processed = available[0..15]
       
       if to_be_processed.empty?
@@ -152,7 +152,7 @@ if __FILE__ == $0
     
     loop do
       mess "begin transmission"
-      missing = db.select{|r| r.status == 4 }.map{|r| r }
+      missing = db.select{|r| r.status == 4 }.compact
       to_be_processed = missing[0..15]
       
       if to_be_processed.empty?
