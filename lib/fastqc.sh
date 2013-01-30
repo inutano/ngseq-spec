@@ -67,7 +67,7 @@ case "${fpath}" in
       cd ${data_path} && ${fastqc_1} && ${cleaning_1} || touch "${unarchived_1}_failed"
     fi
 
-    unarchived_2=`echo ${fpath} | sed -e 's:\.sra$::' | sed -e 's:\.lite$::' | sed -e 's:$:.fastq_2:'`
+    unarchived_2=`echo ${fpath} | sed -e 's:\.sra$::' | sed -e 's:\.lite$::' | sed -e 's:$:_2.fastq:'`
     if [ -e ${unarchived_2} ] ; then
       fastqc_2="${fastqc_path} --noextract --outdir ${result_dir} ${unarchived_2}"
       cleaning_2="rm -fr ${unarchived_2}"
