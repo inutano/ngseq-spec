@@ -72,7 +72,9 @@ case "${fpath}" in
       fastqc_2="${fastqc_path} --noextract --outdir ${result_dir} ${unarchived_2}"
       cleaning_2="rm -fr ${unarchived_2}"
       cd ${data_path} && ${fastqc_2} && ${cleaning_2} || touch "${unarchived_2}_failed"
-    fi ;;
+    fi
+
+    rm -f ${fpath} ;;
 
   * )
     echo "failed: unknown file type" && exit 1 ;;
