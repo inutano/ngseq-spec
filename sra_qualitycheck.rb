@@ -251,17 +251,17 @@ if __FILE__ == $0
     db = Groonga["SRAIDs"]
     
     #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
-    #array = open("./list/list_failed").readlines
+    #array = open("./list/drr_missing").readlines
     #array = open("./error_list").readlines
     #array = open("./list2").readlines
     #array = db.select{|rec| rec.status == 5 }
     #array = Dir.glob("./data/*.fastq.bz2")
     array = []
     array.each do |node|
-      #id = node.gsub(/^\.\/data\//,"").gsub(/\.fastq\.bz2$/,"").gsub(/_.$/,"") 
+      #id = node.gsub(/^\.\/data\//,"").gsub(/\.fastq\.bz2$/,"").gsub(/_.$/,"")
       #record = db[id]
-      #record = db[node.chomp]
-      #record.status = 3
+      record = db[node.chomp]
+      record.status = 4
       #record.status = 1
       #record.status = 6
       #ap node.key.key
