@@ -39,10 +39,9 @@ case "${fpath}" in
     /bin/tar jxfv ${fpath} -C ${data_path} && ${fastqc} && ${cleaning} || touch "${unarchived}_failed" ;;
 
   *.bz2 )
-    unarchived=`echo ${fpath} | sed -e 's:\.bz2$::'`
-    fastqc="${fastqc_path} --noextract --outdir ${result_dir} ${unarchived}"
-    cleaning="rm -fr ${unarchived}"
-    cd ${data_path} && /usr/bin/bunzip2 ${fpath} && ${fastqc} && ${cleaning} || touch "${unarchived}_failed" ;;
+    fastqc="${fastqc_path} --noextract --outdir ${result_dir} ${fpath}"
+    cleaning="rm -fr ${fpath}"
+    ${fastqc} && ${cleaning} || touch "${fpath}_failed" ;;
 
   *.gz )
     fastqc="${fastqc_path} --noextract --outdir ${result_dir} ${fpath}"
