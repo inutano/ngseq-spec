@@ -84,7 +84,9 @@ end
 
 def running_fastqc(runid, fpath, filename, config_path)
   config = YAML.load_file(config_path)
-  log = File.join(config["log_path"], filename + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
+  log_dir = File.join(config["log_path"], filename.slice(0..5))
+  FileUtils.mkdir(log_dir) if !File.exist?(log_dir)
+  log = File.join(log_dir, filename + "_fastqc_#{Time.now.strftime("%m%d%H%M%S")}")
   qsub = config["qsub_path"]
   lib_path = config["lib_path"]
   `#{qsub} -N #{runid} -o #{log} #{lib_path}/fastqc.sh #{runid} #{fpath} #{config_path}`
@@ -103,7 +105,7 @@ if __FILE__ == $0
     
     loop do
       mess "begin transmission"
-      available = db.select{|r| r.status == 1 }.map{|r| r }
+      available = db.select{|r| r.status == 1 }.map{|r| r } # cannot be replaced by #compact, this is Groonga::Hash
       to_be_processed = available[0..15]
       
       if to_be_processed.empty?
@@ -158,7 +160,7 @@ if __FILE__ == $0
     
     loop do
       mess "begin transmission"
-      missing = db.select{|r| r.status == 4 }.map{|r| r }
+      missing = db.select{|r| r.status == 4 }.map{|r| r } # cannot be replaced by #compact, this is Groonga::Hash
       to_be_processed = missing[0..15]
       
       if to_be_processed.empty?
@@ -253,15 +255,14 @@ if __FILE__ == $0
     #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
     #array = open("./list/drr_missing").readlines
     #array = open("./error_list").readlines
-    #array = open("./list2").readlines
     #array = db.select{|rec| rec.status == 5 }
     #array = Dir.glob("./data/*.fastq.bz2")
     array = []
+    #array = open("./idlist").readlines
     array.each do |node|
       #id = node.gsub(/^\.\/data\//,"").gsub(/\.fastq\.bz2$/,"").gsub(/_.$/,"")
       #record = db[id]
       record = db[node.chomp]
-      record.status = 4
       #record.status = 1
       #record.status = 6
       #ap node.key.key
