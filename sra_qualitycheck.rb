@@ -13,9 +13,9 @@ def mess(message)
 end
 
 class Filecheck
-  @@base_path = "/usr/local/ftp/ddbj_database/dra/fastq"
-  @@base_sra_path = "/usr/local/ftp/ddbj_database/dra/sralite/ByExp/litesra"
-
+  @@base_path = "/home/inutano/data/fastq_data"
+  @@base_sra_path = "/home/inutano/data/litesra_data"
+  
   def initialize(record)
     @runid = record.key.key
     @subid = record.subid
