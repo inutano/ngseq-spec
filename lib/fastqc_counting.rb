@@ -4,6 +4,17 @@ require "parallel"
 require "./fastqc_result_parser"
 
 if __FILE__ == $0
+  header = [ "filename",
+             "total_sequences",
+             "min_length",
+             "max_length",
+             "percent_gc",
+             "normalized_phred_score",
+             "total_n_content",
+             "total_duplicate_percentage",
+           ]
+  puts header.join("\t")
+  
   acc = "../sra_metadata/SRA_Accessions"
   rmem = "../sra_metadata/SRA_Run_Members"
 
@@ -12,8 +23,8 @@ if __FILE__ == $0
             { name: "Experiment", sym: "X" },
             { name: "Sample", sym: "S" },
             { name: "Run", sym: "R" } ]
-    
-  cdir = "./fastqc_data"
+  
+  cdir = "../fastqc_data"
   index_dir = Dir.glob(cdir + "/?RR*")
   run_id_dir = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") }
   read_dir = Parallel.map(run_id_dir.flatten){|path| Dir.glob(path + "/?RR*") }
