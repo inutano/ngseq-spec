@@ -15,7 +15,7 @@ if __FILE__ == $0
   download_notfound = BASE + "/project/ER/table/download_notfound"
   data_dir = BASE + "/project/ER/data"
   
-  filelist = open(BASE + "/project/ER/table/filelist").readlines.first(10)
+  filelist = open(BASE + "/project/ER/table/filelist").readlines.first(5000)
   
   while !filelist.empty?
     filepath = Parallel.map(filelist.shift(25)) do |id_n|
