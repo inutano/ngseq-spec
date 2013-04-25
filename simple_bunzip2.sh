@@ -3,3 +3,5 @@
 
 cd /home/inutano/project/ER/data
 bunzip2 $1
+fq=`echo $1 | sed -e 's:.bz2::'`
+mv $fq /home/inutano/project/ER/fastq
