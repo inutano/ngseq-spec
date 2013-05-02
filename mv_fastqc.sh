@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-cd ./data
+cd ./fastq
 ls |\
 awk '$1 ~ /fastqc.zip$/ { print $1 }' |\
 while read f ; do
