@@ -15,8 +15,9 @@ if __FILE__ == $0
   download_notfound = BASE + "/project/ER/table/download_notfound"
   data_dir = BASE + "/project/ER/data"
   
-  filelist = open(BASE + "/project/ER/table/filelist").readlines.first(5000)
+  filelist = open(BASE + "/project/ER/table/filelist").readlines
   
+  progress = 0
   while !filelist.empty?
     filepath = Parallel.map(filelist.shift(25)) do |id_n|
       id = id_n.chomp
@@ -72,7 +73,8 @@ if __FILE__ == $0
       threads << th
     end
     threads.each{|th| th.join }
-    
     open(download_notfound,"a"){|f| f.puts(no_file) }
+    progress += 25
+    puts "#{Time.now}\t" + progress.to_s + " files transferred"
   end
 end
