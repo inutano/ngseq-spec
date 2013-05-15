@@ -5,7 +5,7 @@ require "open-uri"
 require "json"
 
 if __FILE__ == $0
-  acc = "../sra_metadata/SRA_Accessions"
+  acc = ARGV.first || "../april2013/SRA_Accessions_March2013.tab"
   array = [ { name: "Submission", sym: "A" },
             { name: "Study", sym: "P" },
             { name: "Experiment", sym: "X" },
