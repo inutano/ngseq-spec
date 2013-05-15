@@ -4,9 +4,9 @@ require "./lib_db_update"
 
 if __FILE__ == $0
   input_file = ARGV.first
-  data_raw = open(input_file).readlines
+  data = open(input_file).readlines
   
-  header = data_raw.shift
+  header = data.shift
   add_header = [ "instrument",
                  "platform",
                  "lib_strategy",
@@ -20,19 +20,12 @@ if __FILE__ == $0
                ]
   puts header.chomp + "\t" + add_header.join("\t")
   
-  accessions = "../sra_metadata/SRA_Accessions"
-  data = Parallel.map(data_raw) do |line_raw|
-    id = line_raw.slice(0..8)
-    line = `awk -F '\t' '$1 == "#{id}" && $3 == "live" && $9 == "public" { print $0 }' #{accessions}`.chomp
-    line if !line.empty?
-  end
-  
   db_path = "../db/project.db"
   Groonga::Database.open(db_path)
   runs = Groonga["Runs"]
   
   not_recorded = []
-  data.compact.each do |line_raw|
+  data.each do |line_raw|
     line = line_raw.chomp
     id = line.slice(0..8)
     run_record = runs[id]
@@ -59,7 +52,7 @@ if __FILE__ == $0
   end
   
   DBupdate.load_file("./config.yaml")
-  while not_recorded.empty?
+  while !not_recorded.empty?
     to_be_processed = not_recorded.shift(24)
     added_meta = Parallel.map(to_be_processed) do |line|
       id = line.slice(0..8)
