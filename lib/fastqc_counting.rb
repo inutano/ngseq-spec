@@ -27,7 +27,7 @@ if __FILE__ == $0
   cdir = "../fastqc_data"
   index_dir = Dir.glob(cdir + "/?RR*")
   run_id_dir = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") }
-  read_dir = Parallel.map(run_id_dir.flatten){|path| Dir.glob(path + "/?RR*") }
+  read_dir = Parallel.map(run_id_dir.flatten){|path| Dir.glob(path + "/?RR*_fastqc") }
   data_list = Parallel.map(read_dir.flatten){|path| path + "/fastqc_data.txt" }
   
   while !data_list.empty?
