@@ -76,5 +76,14 @@ if __FILE__ == $0
     open(download_notfound,"a"){|f| f.puts(no_file) }
     progress += 25
     puts "#{Time.now}\t" + progress.to_s + " files transferred"
+    
+    disk_usage = `du /home/inutano/ER/data | cut -f 1`.chomp.to_i
+    if disk_usage > 20_000_000_000
+      puts "too much files! (20TB) Type 'continue' to restart"
+      str = ""
+      while str != "continue"
+        str = gets.chomp
+      end
+    end
   end
 end
