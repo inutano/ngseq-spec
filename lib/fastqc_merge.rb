@@ -9,6 +9,8 @@ def parse_fastqc(path)
     p.total_sequences,
     p.min_length,
     p.max_length,
+    p.mean_sequence_length,
+    p.median_sequence_length,
     p.percent_gc,
     p.normalized_phred_score,
     p.total_n_content,
@@ -17,15 +19,10 @@ def parse_fastqc(path)
 end
 
 def paired_avg(f, s)
-  [ f[0],
-    (f[1] + s[1]) / 2,
-    (f[2] + s[2]) / 2,
-    (f[3] + s[3]) / 2,
-    (f[4] + s[4]) / 2,
-    (f[5] + s[5]) / 2,
-    (f[6] + s[6]) / 2,
-    (f[7] + s[7]) / 2,
-    "paired" ]
+  paired = (1..9).map do |num|
+    (f[num] + s[num]) / 2
+  end
+  [f[0]] + paired + ["paired"]
 end
 
 if __FILE__ == $0
@@ -33,6 +30,8 @@ if __FILE__ == $0
              "total_sequences",
              "min_length",
              "max_length",
+             "mean_length",
+             "median_length",
              "percent_gc",
              "normalized_phred_score",
              "total_n_content",
@@ -58,7 +57,7 @@ if __FILE__ == $0
         second = parse_fastqc(second_path)
         paired_avg(first, second).join("\t")
       rescue NoMethodError
-        puts ["Error: missing pair"] + path_list
+        puts ["Error: missing pair"] + path
       end
     end
   end
