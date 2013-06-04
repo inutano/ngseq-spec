@@ -45,7 +45,7 @@ end
 
 if __FILE__ == $0
   input_file = ARGV.first || "../data/data.merge.meta"
-  lines = open(input_file).readlines.first(100).delete_if{|l| l =~ /^filename/ }
+  lines = open(input_file).readlines.delete_if{|l| l =~ /^filename/ }
   run_members = "../sra_metadata/SRA_Run_Members"
   
   runid_sampleid = `awk -F '\t' '$8 == "live" { print $1 "," $4 }' #{run_members}`.split("\n")
@@ -63,12 +63,13 @@ if __FILE__ == $0
     line = line_n.chomp
     runid = line.slice(0..8)
     sampleid = run_v_sample[runid]
-    case sampleid.size
-    when 1
-      sample_v_run[sampleid] ||= []
-      sample_v_run[sampleid] << line
-    else # multiplex
-      sample_v_run[runid] = [line]
+    if sampleid
+      if sampleid.size == 1
+        sample_v_run[sampleid] ||= []
+        sample_v_run[sampleid] << line
+      else # multiplex
+        sample_v_run[runid] = [line]
+      end
     end
   end
   
@@ -76,5 +77,5 @@ if __FILE__ == $0
     values = sample_avg(v)
     ([k] + values).join("\t")
   end
-  open("../data/data.sample.meta","w"){|f| f.puts(header + per_sample) }
+  open("../data/data.sample.meta","w"){|f| f.puts([header.join("\t")] + per_sample) }
 end
