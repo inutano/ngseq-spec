@@ -57,7 +57,7 @@ if __FILE__ == $0
         second = parse_fastqc(second_path)
         paired_avg(first, second).join("\t")
       rescue NoMethodError
-        puts ["Error: missing pair"] + path
+        puts "Error: missing pair" + "\t" + path
       end
     end
   end
