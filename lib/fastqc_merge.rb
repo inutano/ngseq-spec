@@ -18,11 +18,17 @@ def parse_fastqc(path)
     "single" ]
 end
 
-def paired_avg(f, s)
-  paired = (1..9).map do |num|
-    (f[num] + s[num]) / 2
-  end
-  [f[0]] + paired + ["paired"]
+def paired_avg(path_list)
+  first_path = path_list.select{|f| f =~ /_1_fastqc/ }.first + "/fastqc_data.txt"
+  second_path = path_list.select{|f| f =~ /_2_fastqc/ }.first + "/fastqc_data.txt"
+
+  first = parse_fastqc(first_path)
+  second = parse_fastqc(second_path)
+  paired = (1..9).map{|num| (first[num] + second[num]) / 2 }
+
+  [first[0]] + paired + ["paired"]
+rescue NoMethodError
+  []
 end
 
 if __FILE__ == $0
@@ -50,15 +56,7 @@ if __FILE__ == $0
       txt_path = path_list.first + "/fastqc_data.txt"
       parse_fastqc(txt_path).join("\t")
     when 2 .. 3
-      begin
-        first_path = path_list.select{|f| f =~ /_1_fastqc/ }.first + "/fastqc_data.txt"
-        second_path = path_list.select{|f| f =~ /_2_fastqc/ }.first + "/fastqc_data.txt"
-        first = parse_fastqc(first_path)
-        second = parse_fastqc(second_path)
-        paired_avg(first, second).join("\t")
-      rescue NoMethodError
-        puts "Error: missing pair" + "\t" + path
-      end
+      paired_avg(path_list).join("\t")
     end
   end
   open("../data/data.merge","w"){|f| f.puts([header.join("\t")] + data) }
