@@ -46,10 +46,15 @@ if __FILE__ == $0
   
   cdir = "../fastqc_data"
   index_dir = Dir.glob(cdir + "/?RR*") # DRR000
-  run_id_dir = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") } # DRR000001
+  path_list = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") }.flatten # DRR000001
   
-  #data = Parallel.map(run_id_dir.flatten) do |path|
-  data = run_id_dir.flatten.map do |path|
+  prev_path = ARGV.first
+  if prev_path
+    prev_id_list = `awk -F '\t' '$1 != "" { printf "#{cdir}/" "%.6s" "/" "%.9s" "\n", $1 }' #{prev_path}`.split("\n")
+    path_list = path_list - prev_id_list
+  end
+  
+  data = path_list.map do |path|
     path_list = Dir.glob(path + "/?RR*_fastqc") # ../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc
     path_num = path_list.size
     case path_num
@@ -60,5 +65,5 @@ if __FILE__ == $0
       paired_avg(path_list).join("\t")
     end
   end
-  open("../data/data.merge","w"){|f| f.puts([header.join("\t")] + data) }
+  open("../data/data.merge.raw","w"){|f| f.puts([header.join("\t")] + data.compact) }
 end
