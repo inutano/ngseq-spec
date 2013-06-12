@@ -48,7 +48,8 @@ if __FILE__ == $0
   index_dir = Dir.glob(cdir + "/?RR*") # DRR000
   run_id_dir = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") } # DRR000001
   
-  data = Parallel.map(run_id_dir.flatten) do |path|
+  #data = Parallel.map(run_id_dir.flatten) do |path|
+  data = run_id_dir.flatten.map do |path|
     path_list = Dir.glob(path + "/?RR*_fastqc") # ../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc
     path_num = path_list.size
     case path_num
