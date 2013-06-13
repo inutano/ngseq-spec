@@ -44,6 +44,8 @@ if __FILE__ == $0
              "total_duplicate_percentage",
              "layout" ]
   
+  puts header.join("\t")
+  
   cdir = "../fastqc_data"
   index_dir = Dir.glob(cdir + "/?RR*") # DRR000
   path_list = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") }.flatten # DRR000001
@@ -54,16 +56,15 @@ if __FILE__ == $0
     path_list = path_list - prev_id_list
   end
   
-  data = path_list.map do |path|
+  path_list.each do |path|
     path_list = Dir.glob(path + "/?RR*_fastqc") # ../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc
     path_num = path_list.size
     case path_num
     when 1
       txt_path = path_list.first + "/fastqc_data.txt"
-      parse_fastqc(txt_path).join("\t")
+      puts parse_fastqc(txt_path).join("\t")
     when 2 .. 3
-      paired_avg(path_list).join("\t")
+      puts paired_avg(path_list).join("\t")
     end
   end
-  open("../data/data.merge.raw","w"){|f| f.puts([header.join("\t")] + data.compact) }
 end
