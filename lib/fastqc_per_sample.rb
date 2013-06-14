@@ -17,11 +17,11 @@ def header
     "lib_strategy",
     "lib_source",
     "lib_selection",
-    "lib_layout",
-    "lib_nominal_length",
-    "lib_nominal_sdev",
-    "s_name",
-    "genus",
+    #"lib_layout",
+    #"lib_nominal_length",
+    #"lib_nominal_sdev",
+    #"s_name",
+    #"genus",
   ]
 end
 
@@ -45,7 +45,7 @@ end
 
 if __FILE__ == $0
   input_file = ARGV.first || "../data/data.merge.meta"
-  lines = open(input_file).readlines.delete_if{|l| l =~ /^filename/ }
+  lines = open(input_file).readlines.select{|l| l !~ /^filename/ }
   run_members = "../sra_metadata/SRA_Run_Members"
   
   runid_sampleid = `awk -F '\t' '$8 == "live" { print $1 "," $4 }' #{run_members}`.split("\n")
