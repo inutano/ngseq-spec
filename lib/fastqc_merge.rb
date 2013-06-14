@@ -24,7 +24,7 @@ def paired_avg(path_list)
   second = parse_fastqc(base + "_2_fastqc/fastqc_data.txt")
   paired = (1..9).map{|num| (first[num] + second[num]) / 2 }
   [first[0]] + paired + ["paired"]
-rescue NoMethodError
+rescue NoMethodError, Errno::ENOENT
   []
 end
 
