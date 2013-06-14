@@ -49,8 +49,8 @@ if __FILE__ == $0
   
   prev_result = ARGV.first
   if prev_result
-    done = `awk -F '\t' '$1 != "" { printf "#{cdir}/" "%.6s" "/" "%.9s" "\n", $1, $1 }' #{prev_result}`.split("\n")
-    runid_dir = Parallel.map(runid_dir){|path| path if done.include?(path) }.compact
+    done = `awk -F '\t' '$1 != "" { printf "#{cdir}/" "%.6s" "/" "%.9s" ",", $1, $1 }' #{prev_result}`.split(",")
+    runid_dir = Parallel.map(runid_dir){|path| path if !done.include?(path) }.compact
   end
   
   files_path_list = Parallel.map(runid_dir) do |path|
