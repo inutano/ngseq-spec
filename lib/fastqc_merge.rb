@@ -19,13 +19,10 @@ def parse_fastqc(path)
 end
 
 def paired_avg(path_list)
-  first_path = path_list.select{|f| f =~ /_1_fastqc/ }.first + "/fastqc_data.txt"
-  second_path = path_list.select{|f| f =~ /_2_fastqc/ }.first + "/fastqc_data.txt"
-
-  first = parse_fastqc(first_path)
-  second = parse_fastqc(second_path)
+  base = path_list.first.slice(0..40)
+  first = parse_fastqc(base + "_1_fastqc/fastqc_data.txt")
+  second = parse_fastqc(base + "_2_fastqc/fastqc_data.txt")
   paired = (1..9).map{|num| (first[num] + second[num]) / 2 }
-
   [first[0]] + paired + ["paired"]
 rescue NoMethodError
   []
@@ -47,24 +44,32 @@ if __FILE__ == $0
   puts header.join("\t")
   
   cdir = "../fastqc_data"
-  index_dir = Dir.glob(cdir + "/?RR*") # DRR000
-  path_list = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") }.flatten # DRR000001
+  index_dir = Dir.glob(cdir + "/?RR*")
+  runid_dir = Parallel.map(index_dir){|path| Dir.glob(path + "/?RR*") }.flatten
   
-  prev_path = ARGV.first
-  if prev_path
-    prev_id_list = `awk -F '\t' '$1 != "" { printf "#{cdir}/" "%.6s" "/" "%.9s" "\n", $1 }' #{prev_path}`.split("\n")
-    path_list = path_list - prev_id_list
+  prev_result = ARGV.first
+  if prev_result
+    done = `awk -F '\t' '$1 != "" { printf "#{cdir}/" "%.6s" "/" "%.9s" "\n", $1, $1 }' #{prev_result}`.split("\n")
+    runid_dir = Parallel.map(runid_dir){|path| path if done.include?(path) }.compact
   end
   
-  path_list.each do |path|
-    path_list = Dir.glob(path + "/?RR*_fastqc") # ../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc
-    path_num = path_list.size
-    case path_num
-    when 1
-      txt_path = path_list.first + "/fastqc_data.txt"
-      puts parse_fastqc(txt_path).join("\t")
-    when 2 .. 3
-      puts paired_avg(path_list).join("\t")
+  files_path_list = Parallel.map(runid_dir) do |path|
+    Dir.glob(path + "/?RR*_fastqc")
+  end
+  
+  while !files_path_list.empty?
+    pnum = 160
+    processing = files_path_list.shift(pnum)
+    data = Parallel.map(processing) do |paths|
+      path_num = paths.size
+      case path_num
+      when 1
+        txt_path = paths.first + "/fastqc_data.txt"
+        parse_fastqc(txt_path).join("\t")
+      when 2 .. 3
+        paired_avg(paths).join("\t")
+      end
     end
+    puts data.compact
   end
 end
