@@ -16,9 +16,9 @@ def metadata_extract(acc, exp)
     nkgr.css("LIBRARY_STRATEGY").inner_text,
     nkgr.css("LIBRARY_SOURCE").inner_text,
     nkgr.css("LIBRARY_SELECTION").inner_text,
-    nkgr.css("LIBRARY_LAYOUT").first.children[1].name,
-    nkgr.css("LIBRARY_LAYOUT").first.children[1].attr("NOMINAL_LENGTH").to_s,
-    nkgr.css("LIBRARY_LAYOUT").first.children[1].attr("NOMINAL_SDEV").to_s,
+    #nkgr.css("LIBRARY_LAYOUT").first.children[1].name,
+    #nkgr.css("LIBRARY_LAYOUT").first.children[1].attr("NOMINAL_LENGTH").to_s,
+    #nkgr.css("LIBRARY_LAYOUT").first.children[1].attr("NOMINAL_SDEV").to_s,
   ]
 rescue NameError, Errno::ENOENT
   []
@@ -34,11 +34,11 @@ if __FILE__ == $0
                  "lib_strategy",
                  "lib_source",
                  "lib_selection",
-                 "lib_layout",
-                 "lib_nominal_length",
-                 "lib_nominal_sdev",
-                 "s_name",
-                 "genus",
+                 #"lib_layout",
+                 #"lib_nominal_length",
+                 #"lib_nominal_sdev",
+                 #"s_name",
+                 #"genus",
                ]
   puts header.chomp + "\t" + add_header.join("\t")
 
@@ -52,8 +52,8 @@ if __FILE__ == $0
     id = line.slice(0..8)
     run_record = runs[id]
     if run_record
-      s_name_a = run_record.sample.map{|r| r ? r.scientific_name : r }.uniq.compact
-      genus = s_name_a.map{|s_name| s_name.split("\s").first }.uniq.compact
+      #s_name_a = run_record.sample.map{|r| r ? r.scientific_name : r }.uniq.compact
+      #genus = s_name_a.map{|s_name| s_name.split("\s").first }.uniq.compact
       inst = run_record.instrument
       platform = inst.split("\s").first if inst
       a = [ inst,
@@ -61,11 +61,11 @@ if __FILE__ == $0
             run_record.library_strategy,
             run_record.library_source,
             run_record.library_selection,
-            run_record.library_layout,
-            run_record.library_nominal_length,
-            run_record.library_nominal_sdev,
-            s_name_a.join("\s"),
-            genus.join("\s"),
+            #run_record.library_layout,
+            #run_record.library_nominal_length,
+            #run_record.library_nominal_sdev,
+            #s_name_a.join("\s"),
+            #genus.join("\s"),
           ]
       puts line + "\t" + a.join("\t")
     else
@@ -87,10 +87,14 @@ if __FILE__ == $0
     exp_hash[id_acc[0]] = id_acc[1]
   end
   
-  line_remain =  not_recorded.delete_if{|l| l == "" }
-  line_remain.each do |line|
-    id = line.slice(0..8)
-    a = metadata_extract(acc_hash[id], exp_hash[id])
-    puts line + "\t" + a.join("\t")
+  line_remain =  not_recorded.select{|l| l != "" }
+  while !line_remain.empty?
+    processing = line_remain.shift(160)
+    data = Parallel.map(processing) do |line|
+      id = line.slice(0..8)
+      a = metadata_extract(acc_hash[id], exp_hash[id])
+      line + "\t" + a.join("\t")
+    end
+    puts data
   end
 end
