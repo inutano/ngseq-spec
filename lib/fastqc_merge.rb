@@ -25,7 +25,7 @@ def paired_avg(path_list)
   paired = (1..9).map{|num| (first[num] + second[num]) / 2 }
   [first[0]] + paired + ["paired"]
 rescue NoMethodError, Errno::ENOENT
-  []
+  ["unpaired"] + path_list
 end
 
 if __FILE__ == $0
