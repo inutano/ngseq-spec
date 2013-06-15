@@ -41,7 +41,7 @@ if __FILE__ == $0
                  #"genus",
                ]
   puts header.chomp + "\t" + add_header.join("\t")
-
+  
   db_path = "../db/project.db"
   Groonga::Database.open(db_path)
   runs = Groonga["Runs"]
@@ -73,13 +73,6 @@ if __FILE__ == $0
     end
   end
   
-  acc_hash = {} # run id => submissionid
-  acc_raw = `awk -F '\t' '$1 ~ /^.RR/ { print $1 "\t" $2 }' "../sra_metadata/SRA_Accessions"`
-  acc_raw.split("\n").each do |line|
-    id_acc = line.split("\t")
-    acc_hash[id_acc[0]] = id_acc[1]
-  end
-  
   exp_hash = {} # runid => expid
   run_raw = `awk -F '\t' '$1 ~ /^.RR/ { print $1 "\t" $3 }' "../sra_metadata/SRA_Run_Members"`
   run_raw.split("\n").each do |line|
@@ -87,12 +80,21 @@ if __FILE__ == $0
     exp_hash[id_acc[0]] = id_acc[1]
   end
   
+  acc_hash = {} # exp id => submissionid
+  acc_raw = `awk -F '\t' '$1 ~ /^.RX/ { print $1 "\t" $2 }' "../sra_metadata/SRA_Accessions"`
+  acc_raw.split("\n").each do |line|
+    id_acc = line.split("\t")
+    acc_hash[id_acc[0]] = id_acc[1]
+  end
+  
   line_remain =  not_recorded.select{|l| l != "" }
   while !line_remain.empty?
     processing = line_remain.shift(160)
     data = Parallel.map(processing) do |line|
       id = line.slice(0..8)
-      a = metadata_extract(acc_hash[id], exp_hash[id])
+      expid = exp_hash[id]
+      accid = acc_hash[expid]
+      a = metadata_extract(accid, expid)
       line + "\t" + a.join("\t")
     end
     puts data
