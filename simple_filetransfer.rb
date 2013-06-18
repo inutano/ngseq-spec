@@ -15,7 +15,8 @@ if __FILE__ == $0
   download_notfound = BASE + "/project/ER/table/download_notfound"
   data_dir = BASE + "/project/ER/data"
   
-  filelist = open(BASE + "/project/ER/table/filelist").readlines
+  filelist_path = ARGV.first || BASE + "/project/ER/table/filelist"
+  filelist = open(filelist_path).readlines
   
   progress = 0
   while !filelist.empty?
@@ -77,9 +78,11 @@ if __FILE__ == $0
     progress += 25
     puts "#{Time.now}\t" + progress.to_s + " files transferred"
     
-    disk_usage = `du /home/inutano/ER/data | cut -f 1`.chomp.to_i
-    if disk_usage > 20_000_000_000
-      puts "too much files! (20TB) Type 'continue' to restart"
+    data_usage = `du /home/inutano/project/ER/data | cut -f 1`.chomp.to_i
+    fastq_usage = `du /home/inutano/project/ER/fastq | cut -f 1`.chomp.to_i
+    disk_usage = data_usage + fastq_usage
+    if data_usage > 20_000_000_000 or disk_usage > 40_000_000_000
+      puts "disk quota nearly exceeded. Type 'continue' to restart"
       str = ""
       while str != "continue"
         str = gets.chomp
