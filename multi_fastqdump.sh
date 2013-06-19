@@ -3,7 +3,7 @@
 
 base="/home/inutano/project/ER/data"
 cd ${base}
-ls -tr ${base}/*sra | while read f ; do
+ls -Sr ${base}/*sra | head -100 | while read f ; do
   /home/inutano/local/bin/sratoolkit/fastq-dump --split-3 $f && rm -f $f || mv ${f} /home/inutano/project/ER/fqdumpfailed
   mv ${base}/${1:0:9}*.fastq /home/inutano/project/ER/fastq
   echo "${f} finished at `date "+%H:%M:%S"`"
