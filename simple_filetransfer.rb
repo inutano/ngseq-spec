@@ -68,12 +68,6 @@ if __FILE__ == $0
       end
     end
     
-    #test
-    require "ap"
-    ap download
-    ap no_file
-    exit
-    
     threads = []
     download.flatten.each do |file|
       fname = file.split("/").last
