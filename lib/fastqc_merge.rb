@@ -41,7 +41,6 @@ if __FILE__ == $0
              "total_duplicate_percentage",
              "layout" ]
   
-  puts header.join("\t")
   
   cdir = "../fastqc_data"
   index_dir = Dir.glob(cdir + "/?RR*")
@@ -51,6 +50,8 @@ if __FILE__ == $0
   if prev_result
     done = `awk -F '\t' '$1 != "" { printf "#{cdir}/" "%.6s" "/" "%.9s" ",", $1, $1 }' #{prev_result}`.split(",")
     runid_dir = Parallel.map(runid_dir){|path| path if !done.include?(path) }.compact
+  else
+    puts header.join("\t")
   end
   
   files_path_list = Parallel.map(runid_dir) do |path|
