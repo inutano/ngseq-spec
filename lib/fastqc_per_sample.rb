@@ -29,14 +29,14 @@ def sample_avg(array)
   s = array.size
   case s
   when 1
-    array.first.split("\t")[1..18]
+    array.first.split("\t")[1..14]
   else
     parsed = array.map{|line| line.split("\t") }
     sum = parsed.map{|p| p[1].to_i }.reduce(:+)
-    avg = (2..7).map do |col|
+    avg = (2..8).map do |col|
       parsed.map{|p| p[col].to_f }.reduce(:+) / s
     end
-    meta = (8..18).map do |col|
+    meta = (9..14).map do |col|
       parsed.map{|p| p[col] }.uniq.join(",")
     end
     [sum] + avg + meta
