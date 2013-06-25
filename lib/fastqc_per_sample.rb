@@ -7,6 +7,8 @@ def header
     "total_sequences",
     "min_length",
     "max_length",
+    "mean_length",
+    "median_length",
     "percent_gc",
     "normalized_phred_score",
     "total_n_content",
@@ -33,10 +35,10 @@ def sample_avg(array)
   else
     parsed = array.map{|line| line.split("\t") }
     sum = parsed.map{|p| p[1].to_i }.reduce(:+)
-    avg = (2..8).map do |col|
+    avg = (2..9).map do |col|
       parsed.map{|p| p[col].to_f }.reduce(:+) / s
     end
-    meta = (9..14).map do |col|
+    meta = (10..15).map do |col|
       parsed.map{|p| p[col] }.uniq.join(",")
     end
     [sum] + avg + meta
@@ -44,7 +46,7 @@ def sample_avg(array)
 end
 
 if __FILE__ == $0
-  input_file = ARGV.first || "../data/data.merge.meta"
+  input_file = ARGV.first || "../data/data.run.meta"
   lines = open(input_file).readlines.select{|l| l !~ /^filename/ }
   run_members = "../sra_metadata/SRA_Run_Members"
   
