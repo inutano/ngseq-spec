@@ -17,6 +17,7 @@ dir <- "/Users/inutano/Desktop/ggplot/"
 
 for (fp in pathFiles) {
   df <- na.omit(read.delim(fp[[1]]))
+  df <- subset(df, df$total_sequences > 0)
   
   pref <- fp[[2]]
   throughput <- list(log10(df$total_sequences), 0.1, "lightskyblue")
