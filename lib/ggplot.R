@@ -23,9 +23,13 @@ for (fp in pathFiles) {
   throughput[4] <- paste(pref, "log10 throughput", sep = ", ")
   throughput[5] <- "throughput"
   
-  length <- list(log10(df$median_length), 0.05, "firebrick")
-  length[4] <- paste(pref, "median read length", sep = ", ")
-  length[5] <- "median_length"
+  mdlength <- list(log10(df$median_length), 0.05, "tomato")
+  mdlength[4] <- paste(pref, "log 10 median read length", sep = ", ")
+  mdlength[5] <- "median_length"
+
+  mxlength <- list(log10(df$max_length), 0.05, "firebrick")
+  mxlength[4] <- paste(pref, "log 10 max read length", sep = ", ")
+  mxlength[5] <- "max_length"
 
   phred <- list(df$normalized_phred_score, 0.1, "gold")
   phred[4] <- paste(pref, "phred score", sep = ", ")
@@ -39,7 +43,7 @@ for (fp in pathFiles) {
   duplicate[4] <- paste(pref, "total duplicate percentage", sep = ", ")
   duplicate[5] <- "duplicate_percentage"
   
-  categories <- list(throughput, length, phred, ncont, duplicate)
+  categories <- list(throughput, mdlength, mxlength, phred, ncont, duplicate)
 
   layout <- list(~layout, "libraryLayout")
   platform <- list(~platform, "platform")
