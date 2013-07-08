@@ -31,7 +31,7 @@ def sample_avg(array)
   s = array.size
   case s
   when 1
-    array.first.split("\t")[1..14]
+    array.first.split("\t")[1..15]
   else
     parsed = array.map{|line| line.split("\t") }
     sum = parsed.map{|p| p[1].to_i }.reduce(:+)
