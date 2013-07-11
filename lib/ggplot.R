@@ -57,7 +57,7 @@ for (fp in pathFiles) {
     p <- ggplot(df, aes(x = i[[1]]))
     p <- p + geom_histogram(binwidth = i[[2]], fill = "white", color = i[[3]])
     p <- p + labs(x = i[[5]], title = paste(fp[[2]], i[[4]], sep = ", "))
-    ggsave(plot = p, file = paste(dir, fp[[2]], i[[5]], ".overall.png", sep = ""), dpi = 150, width = 12.8, height = 9.6)
+    ggsave(plot = p, file = paste(dir, fp[[2]], ".", i[[5]], ".overall.png", sep = ""), dpi = 150, width = 12.8, height = 9.6)
     
     for (j in facets) {
       p <- p + facet_wrap(j[[1]], scale = "free_y")
