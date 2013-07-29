@@ -56,6 +56,14 @@ if __FILE__ == $0
   
   progress = 0
   while !filelist.empty?
+    if disk_full?
+      puts "disk quota nearly exceeded. Type 'continue' to restart"
+      str = ""
+      while str != "continue"
+        str = gets.chomp
+      end
+    end
+
     download = []
     no_file = []
     filelist.shift(25).each do |id_n|
@@ -82,14 +90,6 @@ if __FILE__ == $0
     
     open(download_notfound,"a"){|f| f.puts(no_file) }
     progress += 25
-    puts "#{Time.now}\t" + progress.to_s + " files transferred"
-    
-    if disk_full?
-      puts "disk quota nearly exceeded. Type 'continue' to restart"
-      str = ""
-      while str != "continue"
-        str = gets.chomp
-      end
-    end
+    puts "#{Time.now}\t" + progress.to_s + " files transferred"    
   end
 end
