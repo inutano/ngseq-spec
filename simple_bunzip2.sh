@@ -2,7 +2,6 @@
 # ls data/ | sed -e 's:data/::g' | while read f ; do ; qsub -N $f simple_fastqc.sh $f ; done
 
 base="/home/inutano/project/ER/data"
-cd ${base}
-/usr/bin/bunzip2 ${base}/${1}
 fq=`echo $1 | sed -e 's:.bz2::'`
-mv ${base}/${fq} /home/inutano/project/ER/fastq
+cd ${base}
+/usr/bin/bunzip2 ${base}/${1} && mv ${base}/${fq} /home/inutano/project/ER/fastq
