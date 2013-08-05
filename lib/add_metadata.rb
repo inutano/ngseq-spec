@@ -37,8 +37,8 @@ if __FILE__ == $0
                  #"lib_layout",
                  #"lib_nominal_length",
                  #"lib_nominal_sdev",
-                 #"s_name",
-                 #"genus",
+                 "s_name",
+                 "genus",
                ]
   puts header.chomp + "\t" + add_header.join("\t")
   
@@ -52,8 +52,8 @@ if __FILE__ == $0
     id = line.slice(0..8)
     run_record = runs[id]
     if run_record
-      #s_name_a = run_record.sample.map{|r| r ? r.scientific_name : r }.uniq.compact
-      #genus = s_name_a.map{|s_name| s_name.split("\s").first }.uniq.compact
+      s_name_a = run_record.sample.map{|r| r ? r.scientific_name : r }.uniq.compact
+      genus = s_name_a.map{|s_name| s_name.split("\s").first }.uniq.compact
       inst = run_record.instrument
       platform = inst.split("\s").first if inst
       a = [ inst,
@@ -64,8 +64,8 @@ if __FILE__ == $0
             #run_record.library_layout,
             #run_record.library_nominal_length,
             #run_record.library_nominal_sdev,
-            #s_name_a.join("\s"),
-            #genus.join("\s"),
+            s_name_a.join("\s"),
+            genus.join("\s"),
           ]
       puts line + "\t" + a.join("\t")
     else
