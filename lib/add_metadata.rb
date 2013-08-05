@@ -9,9 +9,9 @@ TAXON_PATH = "/Users/inutano/project/soylatte/data/taxon_table.csv"
 def ref_taxid_sname
   id_sn = {}
   taxon_raw = `awk -F ',' '{ print $1 "\t" $2 }' #{TAXON_PATH}`.split("\n")
-  taxon_raw.split("\n").each do |line|
+  taxon_raw.each do |line|
     id, name = line.split("\t")
-    tax_sn[id] = name
+    id_sn[id] = name
   end
   id_sn
 end
@@ -63,8 +63,8 @@ end
 def metadata_parser(acc, id, sym)
   metadata_path = "/Users/inutano/project/statistics_sra/sra_metadata/"
   fname = acc + ".#{sym.to_s}.xml"
-  xml_path = File.join(metadata_path, acc.slice(o..5), acc, fname)
-  Nokogiri::XML(open(xml)).css(sym.to_s.upcase).select{|n| n.attr("accession") == id }.first
+  xml_path = File.join(metadata_path, acc.slice(0..5), acc, fname)
+  Nokogiri::XML(open(xml_path)).css(sym.to_s.upcase).select{|n| n.attr("accession") == id }.first
 rescue NameError, Errno::ENOENT
   nil
 end
@@ -88,7 +88,7 @@ end
 
 def extract_taxid(acc, sam)
   p = metadata_parser(acc, sam, :sample)
-  taxid = p.taxon_id
+  p.css("TAXON_ID").inner_text
 rescue NoMethodError
   nil
 end
@@ -111,7 +111,7 @@ if __FILE__ == $0
                  "genus",
                ]
   puts header.chomp + "\t" + add_header.join("\t")
-  
+
   # establish database connection
   db_path = "../db/project.db"
   Groonga::Database.open(db_path)
