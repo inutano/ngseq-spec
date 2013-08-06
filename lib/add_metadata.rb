@@ -155,7 +155,7 @@ if __FILE__ == $0
   # parallel processing of unknocked lines
   line_remain =  not_recorded.select{|l| l != "" }
   while !line_remain.empty?
-    processing = line_remain.shift(160)
+    processing = line_remain.shift(80)
     data = Parallel.map(processing) do |line|
       run = line.slice(0..8)
       exp = run_exp[run]
