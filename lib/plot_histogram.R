@@ -11,8 +11,8 @@ library(ggplot2)
 
 argv <- commandArgs(trailingOnly = T)
 pathRun <- list(argv[1], "run")
-pathSample <- list(argv[2], "sample")
-pathFiles <- list(pathRun, pathSample)
+pathExp <- list(argv[2], "exp")
+pathFiles <- list(pathRun, pathExp)
 dir <- "/Users/inutano/Desktop/ggplot/"
 
 for (fp in pathFiles) {
@@ -40,18 +40,20 @@ for (fp in pathFiles) {
   ncont[4] <- paste(pref, "total N content", sep = ", ")
   ncont[5] <- "totalNcontent"
 
-  duplicate <- list(df$total_duplicate_percentage, 1, "blueviolet")
-  duplicate[4] <- paste(pref, "total duplicate percentage", sep = ", ")
-  duplicate[5] <- "duplicate_percentage"
+  #duplicate <- list(df$total_duplicate_percentage, 1, "blueviolet")
+  #duplicate[4] <- paste(pref, "total duplicate percentage", sep = ", ")
+  #duplicate[5] <- "duplicate_percentage"
   
-  categories <- list(throughput, mdlength, mxlength, phred, ncont, duplicate)
+  #categories <- list(throughput, mdlength, mxlength, phred, ncont, duplicate)
+  categories <- list(throughput, mdlength, mxlength, phred, ncont)
 
   layout <- list(~layout, "libraryLayout")
   platform <- list(~platform, "platform")
   strategy <- list(~lib_strategy, "libraryStrategy")
   selection <- list(~lib_selection, "librarySelection")
   source <- list(~lib_source, "librarySource")
-  facets <- list(layout, platform, strategy, selection, source)
+  #facets <- list(layout, platform, strategy, selection, source)
+  facets <- list(layout, platform, strategy)
   
   for (i in categories) {
     p <- ggplot(df, aes(x = i[[1]]))
