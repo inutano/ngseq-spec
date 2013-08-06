@@ -19,6 +19,9 @@ for (fp in pathFiles) {
   df <- na.omit(read.delim(fp[[1]]))
   df <- subset(df, df$total_sequences > 0)
   
+  df <- subset(df, !(df$platform %in% c("", "undefined")))
+  df <- subset(df, df$platform %in% c("WGS","AMPLICON","RNA-Seq","ChIP-Seq","WXS","EST","CLONE","Bisulfite-Seq"))
+  
   pref <- fp[[2]]
   throughput <- list(log10(df$total_sequences), 0.1, "lightskyblue")
   throughput[4] <- paste(pref, "log10 throughput", sep = ", ")
