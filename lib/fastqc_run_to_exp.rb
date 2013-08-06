@@ -28,11 +28,11 @@ def header
   ]
 end
 
-def sample_avg(array)
+def truncate(array)
   s = array.size
   case s
   when 1
-    array.first[1..15]
+    array.first[1..17]
   else
     sum = array.map{|p| p[1].to_i }.reduce(:+)
     avg = (2..9).map do |col|
@@ -131,7 +131,7 @@ if __FILE__ == $0
   
   lines_merging = Parallel.map(run_merging) do |id_array|
     data_array = id_array.map{|id| runid_data[id] }
-    [id_array.first] + sample_avg(data_array)
+    [id_array.first] + truncate(data_array)
   end
   
   puts header.join("\t")
