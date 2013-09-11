@@ -90,6 +90,6 @@ if __FILE__ == $0
     
     open(download_notfound,"a"){|f| f.puts(no_file) }
     progress += 25
-    puts "#{Time.now}\t" + progress.to_s + " files transferred"    
+    puts "#{Time.now}\t" + progress.to_s + " files transferred, " + filelist.size.to_s + " files left"
   end
 end
