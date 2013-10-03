@@ -20,3 +20,4 @@ echo ""
 echo "disk size"
 du -h /home/inutano/project/ER/data/
 du -h /home/inutano/project/ER/fastq/
+du -h /home/inutano/project/ER/fqdumpfailed/
