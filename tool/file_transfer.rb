@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-require "parallel"
 require "fileutils"
 
 BASE = "/home/inutano"
@@ -57,10 +56,9 @@ if __FILE__ == $0
   progress = 0
   while !filelist.empty?
     if disk_full?
-      puts "disk quota nearly exceeded. Type 'continue' to restart"
-      str = ""
-      while str != "continue"
-        str = gets.chomp
+      puts "Disk quota nearly exceeded: sleep until anyone is out " + Time.now.to_s
+      while disk_full?
+        sleep 10
       end
     end
 
