@@ -7,7 +7,7 @@ Basedir = "/home/inutano/project/ER"
 
 def bz2_order_by_size
   data_dir = Basedir + "/data"
-  bz2_files = Dir.glob(fastq_dir + "/*fastq")
+  bz2_files = Dir.glob(data_dir + "/*bz2")
   bz2_files.sort_by{|f| File.size(f) }
 end
 
