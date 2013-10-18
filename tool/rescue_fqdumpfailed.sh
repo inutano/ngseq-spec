@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-ls fastq/*fastq |\
+ls /home/inutano/project/ER/fastq/*fastq |\
 while read f ; do
   echo "${f}\t`tail -1 ${f}`"
 done |\
