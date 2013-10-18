@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-cd ./fastq
+cd /home/inutano/project/ER/fastq
 ls |\
 awk '$1 ~ /fastqc.zip$/ { print $1 }' |\
 while read f ; do
