@@ -18,10 +18,10 @@ running on Rina Aizawa (DDBJ Super Computer System), in a node connected to the 
 
 since 2011, will end up with the end of next-generation.
 
-### How?
+### how?
 
 read messy scripts or ask me
 
-### Lisence
+### lisence
 
 "THE BEER-WARE LICENSE" (Rivision 42): [inutano@gmail.com](mailto:inutano@gmail.com) is contributing to this project. As long as you retain this notice you can do whatever you want with this stuff. If we meet some day, and you think this stuff is worth it, you can buy me a beer in return. Tazro Inutano Ohta
