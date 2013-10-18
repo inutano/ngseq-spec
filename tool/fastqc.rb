@@ -53,6 +53,7 @@ if __FILE__ == $0
       puts "No file to be processed: sleep until new guys are coming " + Time.now.to_s
       while fastq_list.empty?
         sleep 10
+        fastq_list = fastq_order_by_size
       end
     end
     
