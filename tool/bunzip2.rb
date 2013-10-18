@@ -62,6 +62,7 @@ if __FILE__ == $0
     bz2_list.each do |bz2|
       job_box << qsub_bunzip2(bz2)
     end
+    puts job_box.length.to_s + " jobs submitted " + Time.now.to_s
     
     # waiting for submitted job to finish
     job_box.each do |job_name|

@@ -62,6 +62,7 @@ if __FILE__ == $0
     fastq_list.each do |fastq|
       job_box << qsub_fastqc(fastq)
     end
+    puts job_box.length.to_s + " jobs submitted " + Time.now.to_s
     
     # waiting for submitted job to finish
     job_box.each do |job_name|
