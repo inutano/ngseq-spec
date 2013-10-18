@@ -3,8 +3,17 @@
 
 base="/home/inutano/project/ER/data"
 cd ${base}
-ls -Sr ${base}/*sra | head -100 | while read f ; do
-  /home/inutano/local/bin/sratoolkit/fastq-dump --split-3 $f && rm -f $f || mv ${f} /home/inutano/project/ER/fqdumpfailed
-  mv ${base}/${1:0:9}*.fastq /home/inutano/project/ER/fastq
-  echo "${f} finished at `date "+%H:%M:%S"`"
+ls -S ${base}/*sra | while read f ; do
+  /home/inutano/local/bin/sratoolkit/fastq-dump --split-3 ${f} && \
+   rm -f ${f} && \
+   mv ${base}/${1:0:9}*.fastq /home/inutano/project/ER/fastq && \
+   echo "${f} finished at `date "+%H:%M:%S"`" || \
+   ( mv ${f} /home/inutano/project/ER/fqdumpfailed && \
+     echo "An error occurred during processing ${f};" && \
+     echo "  ${f} moved to fqdumpfailed" && \
+     echo "  possibly disk full, check and type continue;" && \
+     while [ "${SIGNAL}" != "continue" ] ; do
+       read SIGNAL
+     done \
+   )
 done
