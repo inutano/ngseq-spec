@@ -12,7 +12,7 @@ def bz2_order_by_size
 end
 
 def qsub_bunzip2(bz2)
-  job_name = bz2.split("/").last.slice(0..9) + "B"
+  job_name = bz2.split("/").last.slice(0..8) + "B"
   script_path = Basedir + "/tool/bunzip2.sh"
   qsub = "qsub -N #{job_name} #{script_path} #{bz2}"
   sh qsub
@@ -37,7 +37,7 @@ def disk_full?
 end
 
 if __FILE__ == $0
-  while true do
+  while true
     # anytime disk full
     if disk_full?
       puts "Disk quota nearly exceeded: sleep until anyone is out " + Time.now.to_s

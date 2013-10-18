@@ -12,7 +12,7 @@ def fastq_order_by_size
 end
 
 def qsub_fastqc(fastq)
-  job_name = fastq.split("/").last.slice(0..9) + "F"
+  job_name = fastq.split("/").last.slice(0..8) + "F"
   script_path = Basedir + "/tool/fastqc.sh"
   qsub = "/home/geadmin/UGER/bin/lx-amd64/qsub -N #{job_name} #{script_path} #{fastq}"
   sh qsub
@@ -37,7 +37,7 @@ def disk_full?
 end
 
 if __FILE__ == $0
-  while true do
+  while true
     # anytime disk full: fastqc only reduces the size
     #if disk_full?
     #  puts "Disk quota nearly exceeded: sleep until anyone is out " + Time.now.to_s
