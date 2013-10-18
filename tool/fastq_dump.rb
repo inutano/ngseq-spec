@@ -12,8 +12,11 @@ def smallest_3
 end
 
 def fastq_dump(sra_file)
-  fqd = "/home/inutano/local/bin/sratoolkit/fastq-dump --split-3 "
-  sh fqd + sra_file
+  cmd = ""
+  cmd << "cd #{Basedir}/data && "
+  cmd << "/home/inutano/local/bin/sratoolkit/fastq-dump --split-3 "
+  cmd << sra_file
+  sh cmd
   FileUtils.mv(Dir.glob(sra_file.gsub(/\.sra$/,"*.fastq")), Basedir + "/fastq")
   FileUtils.rm_f(sra_file)
   puts sra_file.split("/").last + " finished at " + Time.now.to_s
