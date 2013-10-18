@@ -4,9 +4,9 @@ echo "total number of job:"
 echo ""
 echo "Job count ranking"
 echo "running"
-/home/geadmin/UGER/bin/lx-amd64/qstat -u "*" | awk '$5 == "r" {print $4}' | sort | uniq -c | sort -nr | head
+/home/geadmin/UGER/bin/lx-amd64/qstat -u "*" | awk '$5 == "r" {print $4}' | sort | uniq -c | sort -nr | head -5
 echo "waiting"
-/home/geadmin/UGER/bin/lx-amd64/qstat -u "*" | awk '$5 == "qw" {print $4}' | sort | uniq -c | sort -nr | head
+/home/geadmin/UGER/bin/lx-amd64/qstat -u "*" | awk '$5 == "qw" {print $4}' | sort | uniq -c | sort -nr | head -5
 echo ""
 echo "number of .sra files"
 ls /home/inutano/project/ER/data/*sra | wc -l
