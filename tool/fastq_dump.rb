@@ -35,7 +35,7 @@ def disk_full?
 end
 
 if __FILE__ == $0
-  while true do
+  while true
     # anytime disk full
     if disk_full?
       puts "Disk quota nearly exceeded: sleep until anyone is out " + Time.now.to_s
@@ -61,6 +61,7 @@ if __FILE__ == $0
       th = Thread.new do
         fastq_dump(sra_file)
       end
+      threads << th
     end
     threads.each{|th| th.join }
   end
