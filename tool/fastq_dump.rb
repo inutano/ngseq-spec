@@ -21,7 +21,7 @@ def fastq_dump(sra_file)
   FileUtils.rm_f(sra_file)
   puts sra_file.split("/").last + " finished at " + Time.now.to_s
 rescue RuntimeError
-  FileUtils.mv(sra_file, Basedir + "fqdumpfailed")
+  FileUtils.mv(sra_file, Basedir + "/fqdumpfailed")
   puts sra_file.split("/").last + " ------FAILED------ " + Time.now.to_s
 end
 
@@ -59,7 +59,7 @@ if __FILE__ == $0
     threads = []
     srafiles.each do |srafile|
       th = Thread.new do
-        fastq_dump(sra_file)
+        fastq_dump(srafile)
       end
       threads << th
     end
