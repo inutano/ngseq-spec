@@ -49,7 +49,7 @@ class SRAFile
     wtf = "data/litesra_data/ByExp/litesra"
     sralite_path = File.join(HOME, wtf, v[1].slice(0..2), v[1].slice(0..5), v[1], id)
     if File.exist?(sralite_path)
-      sralite_file = Dir.glob(sralite_path + "/#{id}*")
+      sralite_file = Dir.glob(sralite_path + "/#{id}*sra")
       if !sralite_file.empty?
         sralite_file.map{|f| [f, File.size(f)] }
       end
@@ -81,5 +81,5 @@ if __FILE__ == $0
   qc_done_id = SRAFile.qc_done_list
   waiting_id = available_id - qc_done_id
   SRAFile.set_accessions_hash
-  SRAFile.sorted_filepath(waiting_id)
+  puts SRAFile.sorted_filepath(waiting_id)
 end
