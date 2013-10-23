@@ -3,37 +3,6 @@
 require "fileutils"
 
 BASE = "/home/inutano"
-ACC = BASE + "/project/ER/table/SRA_Accessions.tab"
-
-def get_fq(id)
-  fq_awk = `awk -F '\t' '$1 ~ /^#{id}/ { printf "/" "%.6s" "/" $2 "/" $11, $2 }' #{ACC}`
-  fq_path = BASE + "/data/fastq_data" + fq_awk
-  if File.exist?(fq_path)
-    fq = Dir.entries(fq_path).select{|n| n =~ /^#{id}/ }
-    if !fq.empty?
-      fq.map{|f| File.join(fq_path, f)}
-    end
-  end
-end
-
-def get_sra(id)
-  sra_awk = `awk -F '\t' '$1 ~ /^#{id}/ { printf "/" "%.3s" "/" "%.6s" "/" $11 "/" $1, $11, $11 }' #{ACC}`
-  sralite_path = BASE + "/data/litesra_data/ByExp/litesra" + sra_awk
-  if File.exist?(sralite_path)
-    sralite = Dir.entries(sralite_path).select{|n| n =~ /^#{id}/ }
-    if !sralite.empty?
-      sralite.map{|f| File.join(sralite_path, f)}
-    end
-  end
-end
-
-def conf_fpath(id)
-  files = get_fq(id)
-  if !files
-    files = get_sra(id)
-  end
-  files
-end
 
 def disk_full?
   data_usage = `du /home/inutano/project/ER/data | cut -f 1`.chomp.to_i
@@ -61,18 +30,8 @@ if __FILE__ == $0
         sleep 10
       end
     end
-
-    download = []
-    no_file = []
-    filelist.shift(25).each do |id_n|
-      id = id_n.chomp
-      fa = conf_fpath(id)
-      if fa
-        download << fa
-      else
-        no_file << id
-      end
-    end
+    
+    download = filelist.shift(25).map{|l| l.chomp }
     
     threads = []
     download.flatten.each do |file|
@@ -86,7 +45,6 @@ if __FILE__ == $0
     end
     threads.each{|th| th.join }
     
-    open(download_notfound,"a"){|f| f.puts(no_file) }
     progress += 25
     puts "#{Time.now}\t" + progress.to_s + " files transferred, " + filelist.size.to_s + " files left"
   end
