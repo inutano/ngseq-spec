@@ -18,6 +18,14 @@ def qsub_bunzip2(bz2)
   sh qsub
   job_name
 rescue RuntimeError
+  qstat = "/home/geadmin/UGER/bin/lx-amd64/qstat | grep 'inutano' | wc -l"
+  if `"#{qstat}"`.to_i > 4500
+    puts "---- too many job! ----"
+    while `"#{qstat}"`.to_i > 4500
+      sleep 10
+    end
+    retry
+  end
   puts "------ qsub command caused an error for #{bz2} " + Time.now.to_s
   exit
 end
