@@ -60,14 +60,19 @@ namespace :metadata do
       
       sh "ln -sf #{data_dir} data/sra_metadata"
       rm tar
-      
-      origin_dirs = Dir.entries("data").select{|f| f =~ /^.RA\d{6}$/ }
-      prefix = origin_dirs.map{|f| f.slice(0,6) }.uniq
-      prefix.each do |p|
-        moveto = File.join("data", p)
-        directory File.join("data", p)
-        mv File.join("data", )
-      end
+    end
+  end
+  
+  desc "rearrange directories in sra_metadata"
+  task :rearrange do
+    md_dir = "./data/sra_metadata"
+    origin_dirs = Dir.entries(md_dir).select{|f| f =~ /^.RA\d{6}$/ }
+    prefix = origin_dirs.map{|f| f.slice(0,6) }.uniq
+    prefix.each do |p|
+      moveto = File.join(md_dir, p)
+      files = origin_dirs.map{|f| "#{md_dir}/#{f}" if f =~ /^#{p}/ }.compact
+      mkdir moveto
+      mv files, moveto
     end
   end
 end
