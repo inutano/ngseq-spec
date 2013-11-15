@@ -2,12 +2,13 @@
 
 task :default => :about
 
+ts = Time.now.strftime("%Y%m%d-%H&M")
+
 namespace :dataset do
   desc "retrieve dataset from NCBI"
   task :retrieve => ["SRA_Accessions.tab","SRA_Run_Members.tab","taxon_table.csv"]
   
   directory "data"
-  ts = Time.now.strftime("%Y%m%d-%H&M")
   
   desc "Download SRA metadata table"
   rule %r{SRA.+\.tab} => "data" do |t|
@@ -37,6 +38,29 @@ namespace :dataset do
     rm "gc.prt"
     rm "readme.txt"
     rm "taxdump.tar.gz"
+  end
+end
+
+namespace :metadata do
+  tar = "NCBI_SRA_Metadata_Full_#{Time.now.strftime("%Y%m")}01.tar.gz"
+  desc "retrieve metadata tarball from NCBI"
+  task :retrieve => tar
+  
+  directory "data"
+  
+  desc "Download and decompress sra metadata"
+  file tar => "data" do |t|
+    unless File.exist? File.join("data", t.name)
+      base_url = "ftp.ncbi.nlm.nih.gov/sra/reports/Metadata"
+      sh "lftp -c \"open #{base_url} && pget -n 8 #{t.name}\""
+      sh "tar zxf #{t.name}"
+      
+      data_dir = tar.gsub(/\.tar\.gz$/, "")
+      mv data_dir, "data"
+      
+      sh "ln -sf #{data_dir} data/sra_metadata"
+      rm tar
+    end
   end
 end
 
