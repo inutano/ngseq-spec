@@ -60,6 +60,14 @@ namespace :metadata do
       
       sh "ln -sf #{data_dir} data/sra_metadata"
       rm tar
+      
+      origin_dirs = Dir.entries("data").select{|f| f =~ /^.RA\d{6}$/ }
+      prefix = origin_dirs.map{|f| f.slice(0,6) }.uniq
+      prefix.each do |p|
+        moveto = File.join("data", p)
+        directory File.join("data", p)
+        mv File.join("data", )
+      end
     end
   end
 end
