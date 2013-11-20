@@ -2,33 +2,48 @@
 
 require "parallel"
 
-def load_table(accessions_path)
-  match = '$1 ~ /^.RR/ && $3 == "live" && $9 == "public"'
-  column = [1, 2, 6, 10, 11, 12, 13, 18, 19]
-  col_s = column.map{|n| "$" + n.to_s }.join(' "\t" ')
-  out = "{ print #{col_s} }"
-  awk = `awk -F '\t' '#{match} #{out}' #{accessions_path}`
-  Parallel.map(awk.split("\n")){|l| l.split("\t") }
-end
-
-def get_list(accessions, symbol)
-  hash = { run: 0,
-           submission: 1,
-           received: 2,
-           alias: 3,
-           experiment: 4,
-           sample: 5,
-           study: 6,
-           biosample: 7,
-           bioproject: 8 }
-  accessions.map{|line| line[hash[symbol]] }.uniq
+class SRAIDTable
+  def initialize(data_dir)
+    @data_dir = data_dir
+  end
+  
+  def load_accessions
+    match = '$1 ~ /^.RR/ && $3 == "live" && $9 == "public"'
+    columns = [1, 2, 6, 10, 11, 12, 13, 18, 19]
+    col_s = columns.map{|n| "$" + n.to_s }.join(' "\t" ')
+    fpath = File.join @data_dir, "SRA_Accessions.tab"
+    command = "awk -F '\t' '#{match} { print #{col_s} }' #{fpath}"
+    
+    @accessions ||= `#{command}`.split("\n").map do |line|
+      line.split("\t")
+    end
+    @accessions
+  end
+  
+  def columns_hash
+    { run: 0,
+      submission: 1,
+      received: 2,
+      alias: 3,
+      experiment: 4,
+      sample: 5,
+      study: 6,
+      biosample: 7,
+      bioproject: 8 }
+  end
+  
+  def get_run_hash(symbol)
+    @accessions ||= load_accessions
+    col_num = columns_hash[symbol]
+    hash = {}
+    Parallel.each(@accessions) do |line|
+      hash[line[0]] = line[col_num]
+    end
+  end
 end
 
 if __FILE__ == $0
-  accessions_path = "../data/SRA_Accessions.tab"
-  accessions = load_table(accessions_path)
-  run_list = get_list(accessions, :run)
-  exp_list = get_list(accessions, :experiment)
-  sample_list = get_list(accessions, :sample)
-  puts run_list, exp_list, sample_list
+  idtable = SRAIDTable.new("../data")
+  run_v_exp = idtable.get_run_hash(:experiment)
+  puts run_v_exp
 end
