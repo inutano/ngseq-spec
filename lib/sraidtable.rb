@@ -32,6 +32,12 @@ class SRAIDTable
       bioproject: 8 }
   end
   
+  def get_idlist(symbol)
+    @accessions ||= load_accessions
+    col_num = columns_hash[symbol]
+    Parallel.map(@accessions){|l| l[col_num] }.uniq
+  end
+  
   def get_run_hash(symbol)
     @accessions ||= load_accessions
     col_num = columns_hash[symbol]
