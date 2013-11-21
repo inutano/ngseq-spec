@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 require "parallel"
-require "./sra_metadata_parser"
 require "json"
+
+require File.expand_path(File.dirname(__FILE__)) + "/sra_metadata_parser"
 
 class SRAIDTable
   def initialize(data_dir, symbol)
@@ -14,12 +15,12 @@ class SRAIDTable
   attr_accessor :table
   
   def load_table
-    prefix = { run: "RR", exp: "RX", sample: "RS" }
+    prefix = { run: "RR", experiment: "RX", sample: "RS" }
     
     # id, acc, received, alias, exp, smaple, project, bioproject, biosample 
     columns = [ 1, 2, 6, 10, 11, 12, 13, 18, 19 ]
     column_string = columns.map{|num| "$#{num}" }.join(' "\t" ')
-    match = '$1 ~ /^.#{prefix[@symbol]}/ && $3 == "live" && $9 == "public"'
+    match = "$1 ~ /^.#{prefix[@symbol]}/ && $3 == \"live\" && $9 == \"public\""
     awk = "awk -F '\t' '#{match} { print #{column_string} }' #{@accessions}"
     
     idlist = `#{awk}`.split("\n")
@@ -62,7 +63,7 @@ class SRAIDTable
 end
 
 if __FILE__ == $0
-  data_dir = "./data"
+  data_dir = "/home/inutano/project/opensequencespec/data"
   # parse metadata for all experiment/sample
   exptable = SRAIDTable.new(data_dir, :experiment)
   exp_metadata_hash = exptable.get_metadata_hash
