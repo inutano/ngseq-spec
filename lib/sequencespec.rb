@@ -62,17 +62,18 @@ class SRAIDTable
 end
 
 if __FILE__ == $0
+  data_dir = "./data"
   # parse metadata for all experiment/sample
-  exptable = SRAIDTable.new(:experiment)
+  exptable = SRAIDTable.new(data_dir, :experiment)
   exp_metadata_hash = exptable.get_metadata_hash
   
-  sampletable = SRAIDTable.new(:sample)
+  sampletable = SRAIDTable.new(data_dir, :sample)
   sample_metadata_hash = sampletable.get_metadata_hash
   
   # merge all information to runid
-  runtable = SRAIDTable.new(:run)
+  runtable = SRAIDTable.new(data_dir, :run).table.keys.first(50) # limit
   
-  merged_table = Parallel.map(runtable.table.keys) do |table|
+  merged_table = Parallel.map(runtable) do |table|
     runid = table.shift
     expid = table[3]
     sampleid = table[4]
