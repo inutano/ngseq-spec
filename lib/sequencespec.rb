@@ -15,18 +15,23 @@ class SRAIDTable
   attr_accessor :table
   
   def load_table
-    prefix = { run: "RR", experiment: "RX", sample: "RS" }
-    
-    # id, acc, received, alias, exp, smaple, project, bioproject, biosample 
-    columns = [ 1, 2, 6, 10, 11, 12, 13, 18, 19 ]
-    column_string = columns.map{|num| "$#{num}" }.join(' "\t" ')
-    match = "$1 ~ /^.#{prefix[@symbol]}/ && $3 == \"live\" && $9 == \"public\""
-    awk = "awk -F '\t' '#{match} { print #{column_string} }' #{@accessions}"
-    
-    idlist = `#{awk}`.split("\n")
-    idlist_array = Parallel.map(idlist){|line| line.split("\t") }
+    idlist = exec_awk(target_columns).split("\n")
+    idlist_array = Parallel.map(idlist, :in_processes => 4){|line| line.split("\t") }
     grouped_by_id = idlist_array.group_by{|line| line.first }
     grouped_by_id.each{|k,v| grouped_by_id[k] = v.flatten }
+  end
+  
+  def target_columns
+    # DEFINE COLUMN NUMBERS TO BE EXTRACTED FROM "SRA_Accessions.tab"
+    # id, acc, received, alias, exp, smaple, project, bioproject, biosample
+    [ 1, 2, 6, 10, 11, 12, 13, 18, 19 ]
+  end
+  
+  def exec_awk(columns)
+    prefix = { run: "RR", experiment: "RX", sample: "RS" }
+    match = "$1 ~ /^.#{prefix[@symbol]}/ && $3 == \"live\" && $9 == \"public\""
+    column_string = columns.map{|num| "$#{num}" }.join(' "\t" ')
+    `awk -F '\t' '#{match} { print #{column_string} }' #{@accessions}`
   end
   
   def get_id_related_run
@@ -37,27 +42,37 @@ class SRAIDTable
   end
   
   def parse_metadata(id)
+    p = case @symbol
+        when :experiment
+          SRAMetadataParser::Experiment.new(id, get_xml_path(id))
+        when :sample
+          SRAMetadataParser::Sample.new(id, get_xml_path(id))
+        end
+    field_define[@symbol].map{|f| p.send(f) }
+  rescue NameError, Errno::ENOENT
+    nil
+  end
+  
+  def get_xml_path(id)
     subid = @table[id][1]
     fname = [subid, @symbol.to_s, "xml"].join(".")
-    xml = File.join @sra_metadata, subid.slice(0..5), subid, fname
-    
-    case @symbol
-    when :experiment
-      p = SRAMetadataParser::Experiment.new(id, xml)
-      field = [ :id, :alias, :library_strategy, :library_source, :library_selection,
-                :library_layout, :platform, :instrrument_model ]
-    when :sample
-      p = SRAMetadataParser::Sample.new(id, xml)
-      field = [ :id, :alias, :taxon_id ]
-    end
-    field.map{|f| p.send(f) }
+    File.join @sra_metadata, subid.slice(0..5), subid, fname
+  end
+  
+  def field_define
+    { experiment:
+        [ :alias, :library_strategy, :library_source, :library_selection,
+          :library_layout, :platform, :instrrument_model ],
+      sample:
+        [ :alias, :taxon_id ] }
   end
   
   def get_metadata_hash
-    metadatalist = Parallel.map(@table.keys) do |id|
-      parse_metadata(id)
+    metadatalist = Parallel.map(@table.keys, :in_processes => 4) do |id|
+      metad = parse_metadata(id)
+      [id] + metad if metad
     end
-    grouped_by_id = metadatalist.group_by{|array| array.first }
+    grouped_by_id = metadatalist.compact.group_by{|array| array.first }
     grouped_by_id.each{|k,v| grouped_by_id[k] = v.flatten }
   end
 end
