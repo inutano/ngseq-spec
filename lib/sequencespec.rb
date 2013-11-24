@@ -65,7 +65,7 @@ class SRAIDTable
   def field_define
     { experiment:
         [ :alias, :library_strategy, :library_source,
-          :library_selection, :platform, :instrrument_model ],
+          :library_selection, :platform, :instrument_model ],
       sample:
         [ :alias, :taxon_id ] }
   end
@@ -83,7 +83,7 @@ end
 if __FILE__ == $0
   num_of_process = 16
   data_dir = "/home/inutano/project/opensequencespec/data"
-  out_dit = "/home/inutano/project/opensequencespec/result"
+  out_dir = "/home/inutano/project/opensequencespec/result"
 
   # parse metadata for all experiment/sample
   exptable = SRAIDTable.new(data_dir, num_of_process, :experiment)
@@ -106,5 +106,5 @@ if __FILE__ == $0
       exp_metadata_hash[expid],
       sample_metadata_hash[sampleid] ].flatten
   end
-  open(out_dir + "sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
+  open(out_dir + "/sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
 end
