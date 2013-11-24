@@ -6,24 +6,27 @@ require "json"
 require File.expand_path(File.dirname(__FILE__)) + "/sra_metadata_parser"
 
 class SRAIDTable
-  def initialize(data_dir, symbol)
+  def initialize(data_dir, num_of_processes, symbol)
     @accessions = File.join data_dir, "SRA_Accessions.tab"
     @sra_metadata = File.join data_dir, "sra_metadata"
+    
+    @processes = num_of_processes
+    
     @symbol = symbol
     @table = load_table
   end
   attr_accessor :table
   
   def load_table
-    idlist = exec_awk(target_columns).split("\n")
-    idlist_array = Parallel.map(idlist, :in_processes => 4){|line| line.split("\t") }
+    idlist = exec_awk(target_columns).split("\n").first(100)
+    idlist_array = Parallel.map(idlist, :in_processes => @processes){|line| line.split("\t") }
     grouped_by_id = idlist_array.group_by{|line| line.first }
     grouped_by_id.each{|k,v| grouped_by_id[k] = v.flatten }
   end
   
   def target_columns
     # DEFINE COLUMN NUMBERS TO BE EXTRACTED FROM "SRA_Accessions.tab"
-    # id, acc, received, alias, exp, smaple, project, bioproject, biosample
+    # id, acc, received, alias, exp, sample, project, bioproject, biosample
     [ 1, 2, 6, 10, 11, 12, 13, 18, 19 ]
   end
   
@@ -61,14 +64,14 @@ class SRAIDTable
   
   def field_define
     { experiment:
-        [ :alias, :library_strategy, :library_source, :library_selection,
-          :library_layout, :platform, :instrrument_model ],
+        [ :alias, :library_strategy, :library_source,
+          :library_selection, :platform, :instrrument_model ],
       sample:
         [ :alias, :taxon_id ] }
   end
   
   def get_metadata_hash
-    metadatalist = Parallel.map(@table.keys, :in_processes => 4) do |id|
+    metadatalist = Parallel.map(@table.keys, :in_processes => @processes) do |id|
       metad = parse_metadata(id)
       [id] + metad if metad
     end
@@ -78,18 +81,23 @@ class SRAIDTable
 end
 
 if __FILE__ == $0
+  num_of_process = 16
   data_dir = "/home/inutano/project/opensequencespec/data"
+  out_dit = "/home/inutano/project/opensequencespec/result"
+
   # parse metadata for all experiment/sample
-  exptable = SRAIDTable.new(data_dir, :experiment)
+  exptable = SRAIDTable.new(data_dir, num_of_process, :experiment)
   exp_metadata_hash = exptable.get_metadata_hash
+  open(out_dir + "/exp_metadata.json","w"){|f| JSON.dump(exp_metadata_hash, f) }
   
-  sampletable = SRAIDTable.new(data_dir, :sample)
+  sampletable = SRAIDTable.new(data_dir, num_of_process, :sample)
   sample_metadata_hash = sampletable.get_metadata_hash
+  open(out_dir + "/sample_metadata.json","w"){|f| JSON.dump(sample_metadata_hash, f) }
   
   # merge all information to runid
-  runtable = SRAIDTable.new(data_dir, :run).table.keys.first(50) # limit
+  runtable = SRAIDTable.new(data_dir, num_of_process, :run).table
   
-  merged_table = Parallel.map(runtable) do |table|
+  merged_table = Parallel.map(runtable.values) do |table|
     runid = table.shift
     expid = table[3]
     sampleid = table[4]
@@ -98,5 +106,5 @@ if __FILE__ == $0
       exp_metadata_hash[expid],
       sample_metadata_hash[sampleid] ].flatten
   end
-  open("sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
+  open(out_dir + "sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
 end
