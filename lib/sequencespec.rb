@@ -18,7 +18,7 @@ class SRAIDTable
   attr_accessor :table
   
   def load_table
-    idlist = exec_awk(target_columns).split("\n").first(100)
+    idlist = exec_awk(target_columns).split("\n")
     idlist_array = Parallel.map(idlist, :in_processes => @processes){|line| line.split("\t") }
     grouped_by_id = idlist_array.group_by{|line| line.first }
     grouped_by_id.each{|k,v| grouped_by_id[k] = v.flatten }
