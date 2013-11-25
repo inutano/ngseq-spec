@@ -86,16 +86,31 @@ if __FILE__ == $0
   out_dir = "/home/inutano/project/opensequencespec/result"
 
   # parse metadata for all experiment/sample
-  exptable = SRAIDTable.new(data_dir, num_of_process, :experiment)
-  exp_metadata_hash = exptable.get_metadata_hash
-  open(out_dir + "/exp_metadata.json","w"){|f| JSON.dump(exp_metadata_hash, f) }
+  exp_json = out_dir + "/exp_metadata.json"
+  if !File.exist?(exp_json)
+    exptable = SRAIDTable.new(data_dir, num_of_process, :experiment)
+    exp_metadata_hash = exptable.get_metadata_hash
+    open(exp_json,"w"){|f| JSON.dump(exp_metadata_hash, f) }
+  else
+    exp_metadata_hash = open(exp_json){|f| JSON.load(f) }
+  end
   
-  sampletable = SRAIDTable.new(data_dir, num_of_process, :sample)
-  sample_metadata_hash = sampletable.get_metadata_hash
-  open(out_dir + "/sample_metadata.json","w"){|f| JSON.dump(sample_metadata_hash, f) }
+  sample_json = out_dir + "/sample_metadata.json"
+  if !File.exist?(sample_json)
+    sampletable = SRAIDTable.new(data_dir, num_of_process, :sample)
+    sample_metadata_hash = sampletable.get_metadata_hash
+    open(sample_json,"w"){|f| JSON.dump(sample_metadata_hash, f) }
+  else
+    sample_metadata_hash = open(sample_json){|f| JSON.load(f) }
+  end
   
   # merge all information to runid
-  runtable = SRAIDTable.new(data_dir, num_of_process, :run).table
+  runtable_json = out_dir + "/runtable.json"
+  if !File.exist?(runtable_json)
+    runtable = SRAIDTable.new(data_dir, num_of_process, :run).table
+  else
+    runtable = open(runtable_json){|f| JSON.load(f) }
+  end
   
   merged_table = Parallel.map(runtable.values) do |table|
     runid = table.shift
