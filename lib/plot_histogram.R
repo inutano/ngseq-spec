@@ -11,21 +11,22 @@ library(ggplot2)
 
 argv <- commandArgs(trailingOnly = T)
 pathRun <- list(argv[1], "run")
-pathExp <- list(argv[2], "exp")
+pathExp <- list(argv[2], "experiment")
 pathFiles <- list(pathRun, pathExp)
 dir <- "/Users/inutano/Desktop/ggplot/"
 
 for (fp in pathFiles) {
   df <- na.omit(read.delim(fp[[1]]))
   df <- subset(df, df$total_sequences > 0)
+  df <- subset(df, !(df$layout %in% c("single,paired","paired,single")))
   
   df <- subset(df, !(df$platform %in% c("", "undefined")))
-  df <- subset(df, df$platform %in% c("WGS","AMPLICON","RNA-Seq","ChIP-Seq","WXS","EST","CLONE","Bisulfite-Seq"))
+  df <- subset(df, df$lib_strategy %in% c("WGS","AMPLICON","RNA-Seq","ChIP-Seq","WXS","EST","CLONE","Bisulfite-Seq"))
   
   pref <- fp[[2]]
   throughput <- list(log10(df$total_sequences), 0.1, "lightskyblue")
-  throughput[4] <- paste(pref, "log10 throughput", sep = ", ")
-  throughput[5] <- "throughput"
+  throughput[4] <- paste(pref, "log10 number of reads", sep = ", ")
+  throughput[5] <- "number_of_reads"
   
   mdlength <- list(log10(df$median_length), 0.05, "tomato")
   mdlength[4] <- paste(pref, "log 10 median read length", sep = ", ")
@@ -43,31 +44,31 @@ for (fp in pathFiles) {
   ncont[4] <- paste(pref, "total N content", sep = ", ")
   ncont[5] <- "totalNcontent"
 
-  #duplicate <- list(df$total_duplicate_percentage, 1, "blueviolet")
-  #duplicate[4] <- paste(pref, "total duplicate percentage", sep = ", ")
-  #duplicate[5] <- "duplicate_percentage"
+  duplicate <- list(df$total_duplicate_percentage, 1, "blueviolet")
+  duplicate[4] <- paste(pref, "total duplicate percentage", sep = ", ")
+  duplicate[5] <- "duplicate_percentage"
   
-  #categories <- list(throughput, mdlength, mxlength, phred, ncont, duplicate)
-  categories <- list(throughput, mdlength, mxlength, phred, ncont)
+  categories <- list(throughput, mdlength, mxlength, phred, ncont, duplicate)
+  #categories <- list(throughput, mdlength, mxlength, phred, ncont)
 
   layout <- list(~layout, "libraryLayout")
   platform <- list(~platform, "platform")
   strategy <- list(~lib_strategy, "libraryStrategy")
   selection <- list(~lib_selection, "librarySelection")
   source <- list(~lib_source, "librarySource")
-  #facets <- list(layout, platform, strategy, selection, source)
-  facets <- list(layout, platform, strategy)
+  facets <- list(layout, platform, strategy, selection, source)
+  #facets <- list(layout, platform, strategy)
   
   for (i in categories) {
     p <- ggplot(df, aes(x = i[[1]]))
     p <- p + geom_histogram(binwidth = i[[2]], fill = "white", color = i[[3]])
     p <- p + labs(x = i[[5]], title = paste(fp[[2]], i[[4]], sep = ", "))
-    ggsave(plot = p, file = paste(dir, fp[[2]], ".", i[[5]], ".overall.png", sep = ""), dpi = 150, width = 12.8, height = 9.6)
+    ggsave(plot = p, file = paste(dir, fp[[2]], ".", i[[5]], ".overall.png", sep = ""), dpi = 75, width = 12.8, height = 9.6)
     
     for (j in facets) {
       p <- p + facet_wrap(j[[1]], scale = "free_y")
       p <- p + labs(x = i[[5]], title = paste(i[[4]], j[[2]], sep = ", "))
-      ggsave(plot = p, file = paste(dir, fp[[2]], ".", i[[5]], ".", j[[2]], ".png", sep = ""), dpi = 150, width = 12.8, height = 9.6)
+      ggsave(plot = p, file = paste(dir, fp[[2]], ".", i[[5]], ".", j[[2]], ".png", sep = ""), dpi = 75, width = 12.8, height = 9.6)
     }
   }
 }
