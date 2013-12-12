@@ -8,9 +8,7 @@ def disk_full?
   data_usage = `du /home/inutano/project/ER/data | cut -f 1`.chomp.to_i
   fastq_usage = `du /home/inutano/project/ER/fastq | cut -f 1`.chomp.to_i
   disk_usage = data_usage + fastq_usage
-  if data_usage > 20_000_000_000 or disk_usage > 40_000_000_000
-    true
-  end
+  data_usage > 20_000_000_000 or disk_usage > 40_000_000_000
 end
 
 def wd
@@ -42,7 +40,8 @@ if __FILE__ == $0
       end
     end
     
-    download = filelist.shift(25).map{|l| l.chomp }
+    simultaneous_proc = 25
+    download = filelist.shift(simultaneous_proc).map{|l| l.chomp }
     
     threads = []
     download.flatten.each do |fpath|
@@ -53,7 +52,7 @@ if __FILE__ == $0
     end
     threads.each{|th| th.join }
     
-    progress += 25
+    progress += simultaneous_proc
     puts "#{Time.now}\t" + progress.to_s + " files transferred, " + filelist.size.to_s + " files left"
   end
 end
