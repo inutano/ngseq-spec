@@ -13,12 +13,23 @@ def disk_full?
   end
 end
 
-if __FILE__ == $0
-  download_dir = BASE + "/project/ER/download"
-  download_log = BASE + "/project/ER/table/download_log"
-  download_notfound = BASE + "/project/ER/table/download_notfound"
-  data_dir = BASE + "/project/ER/data"
+def wd
+  { download_dir: BASE + "/project/ER/download",
+    download_log: BASE + "/project/ER/table/download_log",
+    download_notfound: BASE + "/project/ER/table/download_notfound",
+    data_dir: BASE + "/project/ER/data" }
+end
 
+def file_transfer(fpath)
+  fname = fpath.split("/").last
+  FileUtils.cp(file, wd[:download_dir])
+  FileUtils.mv(File.join(wd[:download_dir], fname), wd[:data_dir])
+  open(wd[:download_log],"a"){|f| f.puts(fname) }
+rescue Errno::ENOENT
+  open(wd[:download_notfound],"a"){|f| f.puts(fpath) }
+end
+
+if __FILE__ == $0
   filelist_path = ARGV.first || BASE + "/project/ER/table/filelist"
   filelist = open(filelist_path).readlines
   
@@ -34,12 +45,9 @@ if __FILE__ == $0
     download = filelist.shift(25).map{|l| l.chomp }
     
     threads = []
-    download.flatten.each do |file|
-      fname = file.split("/").last
+    download.flatten.each do |fpath|
       th = Thread.new do
-        FileUtils.cp(file, download_dir)
-        FileUtils.mv(File.join(download_dir, fname), data_dir)
-        open(download_log,"a"){|f| f.puts(fname) }
+        file_transfer(fpath)
       end
       threads << th
     end
