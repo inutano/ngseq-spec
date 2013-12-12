@@ -7,3 +7,5 @@ fastqc_data
 march2013/
 sra_metadata
 tmp/
+lib/config.yaml
+taxonomy/
