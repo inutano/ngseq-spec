@@ -1,7 +1,9 @@
 # :)
 
 require "parallel"
-require "./fastqc_result_parser"
+require "json"
+
+require File.expand_path(File.dirname(__FILE__)) + "/fastqc_result_parser"
 
 module ReadSpecUtils
   def self.get_data_path(qc_dir)
@@ -20,7 +22,7 @@ class ReadSpec
   def get_spec(metadata_tab)
     qc_data = get_qc_data
     metadata = metadata_tab[@id]
-    qc_data + metadata
+    (metadata + qc_data).flatten
   end
   
   def get_qc_data
