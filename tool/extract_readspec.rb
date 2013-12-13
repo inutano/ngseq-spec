@@ -26,7 +26,7 @@ class ReadSpec
     when 1
       parse_qc_data(@set.first) + ["single"]
     else
-      merge_qc_data
+      merge_qc_data + ["paired"]
     end
   end
   
@@ -34,7 +34,7 @@ class ReadSpec
     read1, read2 = [/_1/, /_2/].map{|rex| @set.select{|name| name =~ rex }.first }
     qc1, qc2 = [read1, read2].map{|read| parse_qc_data(read) }
     raise NameError if qc1[0] != qc2[0]
-    qc1[0] + (1..8).map{|n| (qc1[n] + qc2[n]) / 2.0 } + ["paired"]
+    qc1[0] + (1..8).map{|n| (qc1[n] + qc2[n]) / 2.0 }
   end
   
   def parse_qc_data(path)
