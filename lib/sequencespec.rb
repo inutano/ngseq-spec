@@ -111,7 +111,7 @@ if __FILE__ == $0
   sample_metadata_hash = open(sample_json){|f| JSON.load(f) }
   runtable = open(runtable_json){|f| JSON.load(f) }
   
-  merged_table = Parallel.map(runtable.values) do |table|
+  merged_table = Parallel.map(runtable.values, :in_processes => num_of_process) do |table|
     runid = table.shift
     expid = table[3]
     sampleid = table[4]
