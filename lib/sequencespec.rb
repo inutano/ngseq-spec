@@ -107,7 +107,6 @@ if __FILE__ == $0
   end
 
   # merge all information to runid
-  
   exp_metadata_hash = open(exp_json){|f| JSON.load(f) }
   sample_metadata_hash = open(sample_json){|f| JSON.load(f) }
   runtable = open(runtable_json){|f| JSON.load(f) }
@@ -121,5 +120,6 @@ if __FILE__ == $0
       exp_metadata_hash[expid],
       sample_metadata_hash[sampleid] ].flatten
   end
+  sequence_spec = merged_table.group_by{|n| n.first }
   open(out_dir + "/sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
 end
