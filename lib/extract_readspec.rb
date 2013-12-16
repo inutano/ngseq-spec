@@ -39,6 +39,8 @@ class ReadSpec
     qc1, qc2 = [read1, read2].map{|read| parse_qc_data(read) }
     raise NameError if qc1[0] != qc2[0]
     [qc1[0]] + (1..8).map{|n| (qc1[n] + qc2[n]) / 2.0 }
+  rescue NameError
+    ["illegal-pair"]
   end
   
   def parse_qc_data(path)
@@ -58,11 +60,11 @@ end
 if __FILE__ == $0
   qc_dir = "../fastqc_data"
   data_path = ReadSpecUtils.get_data_path(qc_dir)
-  sequence_spec = "./sequencespec.json"
-  md_tab = open(sequence_spec){|f| JSON.load(f) }
+  sequencespec = "../result/sequencespec.json"
+  md_tab = open(sequencespec){|f| JSON.load(f) }
   
-  data_path.each_pair do |id, paths|
-    rs = ReadSpec.new(id, paths)
-    rs.get_spec(md_tab)
+  result = Parallel.map(data_path) do |id, paths|
+    ReadSpec.new(id, paths).get_spec(md_tab).join("\t")
   end
+  open("../result/sequencespec.tab","w"){|f| f.puts(result) }
 end
