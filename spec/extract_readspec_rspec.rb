@@ -1,30 +1,7 @@
 # :)
 
 require "rspec"
-require "./extract_readspec.rb"
-
-describe ReadSpec do
-  context "getting a summary for DRR000001" do
-    before do
-      id = "DRR000001"
-      paths = ["../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc/fastqc_data.txt"]
-      paths << "../fastqc_data/DRR000/DRR000001/DRR000001_2_fastqc/fastqc_data.txt"
-      paths << "../fastqc_data/DRR000/DRR000001/DRR000001_fastqc/fastqc_data.txt"
-      @rs = ReadSpec.new(id, paths)
-    end
-    
-    it "returns merged qc data if it was paired-end" do
-      qc_data = @rs.get_qc_data
-      expect(qc_data).to be_a_kind_of(Array)
-      expect(qc_data).to eq("")
-    end
-    
-    it "merged qc data and metadata" do
-      md_tab = open("./sequencespec.json"){|f| JSON.load(f) }
-      expect(@rs.get_spec(md_tab)).to eq("")
-    end
-  end
-end
+require "../lib/extract_readspec.rb"
 
 describe ReadSpecUtils do
   describe "getting a list of QC data path grouped by Run ID" do
@@ -39,3 +16,27 @@ describe ReadSpecUtils do
     end
   end
 end
+
+describe ReadSpec do
+  context "getting a summary for DRR000001" do
+    before do
+      id = "DRR000001"
+      paths = ["../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc/fastqc_data.txt"]
+      paths << "../fastqc_data/DRR000/DRR000001/DRR000001_2_fastqc/fastqc_data.txt"
+      paths << "../fastqc_data/DRR000/DRR000001/DRR000001_fastqc/fastqc_data.txt"
+      @rs = ReadSpec.new(id, paths)
+    end
+    
+    it "returns merged qc data if it was paired-end" do
+      qc_data = @rs.get_qc_data
+      expect(qc_data).to be_a_kind_of(Array)
+      expect(qc_data.compact.size).to eq(10)
+    end
+    
+    it "merged qc data and metadata" do
+      md_tab = open("../result/sequencespec.json"){|f| JSON.load(f) }
+      expect(@rs.get_spec(md_tab).size).to eq(29)
+    end
+  end
+end
+
