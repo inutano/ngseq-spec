@@ -66,7 +66,7 @@ if __FILE__ == $0
   sequencespec = "../result/sequencespec.json"
   md_tab = open(sequencespec){|f| JSON.load(f) }
   
-  result = Parallel.map(data_path) do |id, paths|
+  result = Parallel.map(data_path, :in_threads => 20) do |id, paths|
     ReadSpec.new(id, paths).get_spec(md_tab).join("\t")
   end
   open("../result/sequencespec.tab","w"){|f| f.puts(result) }
