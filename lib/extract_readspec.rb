@@ -22,7 +22,10 @@ class ReadSpec
   def get_spec(metadata_tab)
     qc_data = get_qc_data
     metadata = metadata_tab[@id]
-    (metadata + qc_data).flatten
+    raise NameError if !metadata
+    (qc_data + metadata).flatten
+  rescue NameError
+    qc_data
   end
   
   def get_qc_data
