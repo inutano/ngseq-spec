@@ -6,20 +6,30 @@ require "json"
 require File.expand_path(File.dirname(__FILE__)) + "/fastqc_result_parser"
 
 module ReadSpecUtils
-  def self.get_data_path(qc_dir)
+  def self.get_all_path(qc_dir)
     dirs = Dir.glob(qc_dir + "/?RR*/?RR*/?RR*_fastqc").map{|p| p + fname }
-    dirs.group_by{|fp| fp.match(/(.RR\d+)_.+qc/)[1] }
+    group_by_id(dirs)
   end
   
-  def self.get_path(id, qc_dir)
+  def self.get_path_by_list(list, qc_dir)
+    paths = Parallel.map(list, :in_threads => 12) do |id|
+      get_path_by_id(id, qc_dir)
+    end
+    group_by_id(paths.flatten)
+  end
+  
+  def self.get_path_by_id(id, qc_dir)
     raise NameError if id !~ /^(S|E|D)RR\d{3}\d+$/
     dir = File.join qc_dir, id.slice(0..5), id
-    reads = Dir.glob(dir + "/#{id}*_fastqc").map{|p| p + fname }
-    reads.group_by{|fp| fp.match(/#{id}/).to_s }
+    Dir.glob(dir + "/#{id}*_fastqc").map{|p| p + fname }
   end
   
   def self.fname
     "/fastqc_data.txt"
+  end
+  
+  def self.group_by_id(array)
+    array.group_by{|fp| fp.match(/(.RR\d+)_.+qc/)[1] }
   end
 end
 
@@ -64,12 +74,12 @@ end
 
 if __FILE__ == $0
   qc_dir = "../fastqc_data"
-  data_path = ReadSpecUtils.get_data_path(qc_dir)
+  ids = open("../result/sequencespec.json"){|f| JSON.load(f) }.keys
+  data_path = ReadSpecUtils.get_path_by_list(ids)
   
   readspec_array = Parallel.map(data_path, :in_threads => 20) do |id, paths|
     ReadSpec.new(id, paths).get_spec.join("\t")
   end
-  
   readspec_hash = readspec_array.group_by{|line| line.first }
   open("../result/readspec.json","w"){|f| JSON.dump(readspec_hash, f) }
 end

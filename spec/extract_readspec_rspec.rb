@@ -7,7 +7,7 @@ describe ReadSpecUtils do
   describe "getting all the list of QC data path grouped by Run ID" do
     before do
       qc_dir = "../fastqc_data"
-      @data_hash = ReadSpecUtils.get_data_path(qc_dir)
+      @data_hash = ReadSpecUtils.get_all_path(qc_dir)
     end
     
     it "returns hash of which its keys only contain Run ID" do
@@ -18,22 +18,13 @@ describe ReadSpecUtils do
   
   context "generate a file path from query id DRR000001" do
     before do
-      @id = "DRR000001"
+      id = "DRR000001"
       qc_dir = "../fastqc_data"
-      @data_path = ReadSpecUtils.get_path(@id, qc_dir)
+      @paths = ReadSpecUtils.get_path_by_id(id, qc_dir)
     end
     
-    it "returns hash of which its key is same as query id" do
-      keys = @data_path.keys
-      expect(keys.size).to eq(1)
-      expect(keys.first).to eq(@id)
-    end
-    
-    it "returns hash of which its values are directory paths that exist" do
-      values = @data_path.values
-      expect(values.size).to eq(1)
-      paths = values.first
-      paths.each do |path|
+    it "returns an array of data paths that are exist" do
+      @paths.each do |path|
         expect(File).to exist(path)
       end
     end
@@ -44,9 +35,8 @@ describe ReadSpec do
   context "getting a summary for DRR000001" do
     before do
       id = "DRR000001"
-      paths = ["../fastqc_data/DRR000/DRR000001/DRR000001_1_fastqc/fastqc_data.txt"]
-      paths << "../fastqc_data/DRR000/DRR000001/DRR000001_2_fastqc/fastqc_data.txt"
-      paths << "../fastqc_data/DRR000/DRR000001/DRR000001_fastqc/fastqc_data.txt"
+      qc_dir = "../fastqc_data"
+      paths = ReadSpecUtils.get_path_by_id(id, qc_dir)
       @rs = ReadSpec.new(id, paths)
     end
     
