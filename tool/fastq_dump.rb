@@ -5,10 +5,10 @@ require "fileutils"
 
 Basedir = "/home/inutano/project/ER"
 
-def smallest_3
+def next_items(num)
   data_dir = Basedir + "/data"
   sra_files = Dir.glob(data_dir + "/*sra")
-  sra_files.sort_by{|f| File.size(f) }.shift(3)
+  sra_files.sort_by{|f| File.size(f) }.shift(num)
 end
 
 def fastq_dump(sra_file)
@@ -44,8 +44,9 @@ if __FILE__ == $0
       end
     end
 
-    # 3 is always a right number
-    srafiles = smallest_3.compact
+    # fix the number to change throughput
+    number_of_parallel = 8
+    srafiles = next_items(number_of_parallel).compact
 
     # no file to dump
     if srafiles.empty?
