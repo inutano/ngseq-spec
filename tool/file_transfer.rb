@@ -20,7 +20,7 @@ end
 
 def file_transfer(fpath)
   fname = fpath.split("/").last
-  FileUtils.cp(file, wd[:download_dir])
+  FileUtils.cp(fpath, wd[:download_dir])
   FileUtils.mv(File.join(wd[:download_dir], fname), wd[:data_dir])
   open(wd[:download_log],"a"){|f| f.puts(fname) }
 rescue Errno::ENOENT
