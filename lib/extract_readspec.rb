@@ -12,7 +12,7 @@ module ReadSpecUtils
   end
   
   def self.get_path_by_list(list, qc_dir)
-    paths = Parallel.map(list, :in_threads => 12) do |id|
+    paths = Parallel.map(list, :in_threads => 24) do |id|
       get_path_by_id(id, qc_dir)
     end
     group_by_id(paths.flatten)
@@ -69,16 +69,18 @@ class ReadSpec
       p.normalized_phred_score,
       p.total_n_content,
       p.total_duplicate_percentage ]
+  rescue TypeError
+    []
   end
 end
 
 if __FILE__ == $0
   qc_dir = "../fastqc_data"
   ids = open("../result/sequencespec.json"){|f| JSON.load(f) }.keys
-  data_path = ReadSpecUtils.get_path_by_list(ids)
+  data_path = ReadSpecUtils.get_path_by_list(ids, qc_dir)
   
-  readspec_array = Parallel.map(data_path, :in_threads => 20) do |id, paths|
-    ReadSpec.new(id, paths).get_spec.join("\t")
+  readspec_array = Parallel.map(data_path, :in_threads => 24) do |id, paths|
+    ReadSpec.new(id, paths).get_spec
   end
   readspec_hash = readspec_array.group_by{|line| line.first }
   open("../result/readspec.json","w"){|f| JSON.dump(readspec_hash, f) }
