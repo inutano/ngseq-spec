@@ -8,6 +8,7 @@ class SRAFile
   HOME = "/home/inutano"
   ACC = HOME + "/project/ER/table/SRA_Accessions.tab"
   @@hash = {}
+  @@num_of_parallel = 16
   
   def self.set_accessions_hash
     s = `awk -F '\t' '$1 ~ /^.RR/ && $3 == "live" && $9 == "public" { print $1 "\t" $2 "\t" $11 }' #{ACC}`
@@ -26,9 +27,9 @@ class SRAFile
     # return an array of qc-done ID
     fastqc_result_dir = HOME + "/backup/fastqc_result"
     index_dirs = Dir.glob(fastqc_result_dir + "/*RR*")
-    runid_dirs = Parallel.map(index_dirs){|dpath| Dir.glob("#{dpath}/*RR*") }.flatten
-    runfiles = Parallel.map(runid_dirs){|dpath| Dir.glob("#{dpath}/*zip") }.flatten
-    Parallel.map(runfiles){|fname| fname.split("/").last.slice(0..8) }.sort.uniq
+    runid_dirs = Parallel.map(index_dirs, :in_threads => @@num_of_parallel){|dpath| Dir.glob("#{dpath}/*RR*") }.flatten
+    runfiles = Parallel.map(runid_dirs, :in_threads => @@num_of_parallel){|dpath| Dir.glob("#{dpath}/*zip") }.flatten
+    Parallel.map(runfiles, :in_threads => @@num_of_parallel){|fname| fname.split("/").last.slice(0..8) }.sort.uniq
   end
   
   def self.fq_path(id)
@@ -65,7 +66,7 @@ class SRAFile
   end
   
   def self.sorted_filepath(id_array)
-    file_path_array = Parallel.map(id_array){|id| self.get_file_path(id) }.compact
+    file_path_array = Parallel.map(id_array, :in_threads => @@num_of_parallel){|id| self.get_file_path(id) }.compact
     box_to_sort = []
     file_path_array.each do |path_array|
       path_array.each do |path_size|
