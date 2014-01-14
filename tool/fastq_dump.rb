@@ -53,6 +53,7 @@ if __FILE__ == $0
       puts "No file to dump: sleep until new guys are coming " + Time.now.to_s
       while srafiles.empty?
         sleep 10
+        srafiles = next_items(number_of_parallel).compact
       end
     end
     
