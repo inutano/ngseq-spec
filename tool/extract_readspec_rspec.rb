@@ -16,6 +16,12 @@ describe ReadSpec do
     it "returns merged qc data if it was paired-end" do
       qc_data = @rs.get_qc_data
       expect(qc_data).to be_a_kind_of(Array)
+      expect(qc_data).to eq("")
+    end
+    
+    it "merged qc data and metadata" do
+      md_tab = open("./sequencespec.json"){|f| JSON.load(f) }
+      expect(@rs.get_spec(md_tab)).to eq("")
     end
   end
 end

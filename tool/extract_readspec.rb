@@ -17,8 +17,10 @@ class ReadSpec
     @set = read_path_set
   end
   
-  def get_spec
+  def get_spec(metadata_tab)
     qc_data = get_qc_data
+    metadata = metadata_tab[@id]
+    qc_data + metadata
   end
   
   def get_qc_data
@@ -49,7 +51,16 @@ class ReadSpec
       p.total_n_content,
       p.total_duplicate_percentage ]
   end
+end
+
+if __FILE__ == $0
+  qc_dir = "../fastqc_data"
+  data_path = ReadSpecUtils.get_data_path(qc_dir)
+  sequence_spec = "./sequencespec.json"
+  md_tab = open(sequence_spec){|f| JSON.load(f) }
   
-  def metadata
+  data_path.each_pair do |id, paths|
+    rs = ReadSpec.new(id, paths)
+    rs.get_spec(md_tab)
   end
 end
