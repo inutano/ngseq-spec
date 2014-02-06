@@ -5,8 +5,8 @@ require "fileutils"
 BASE = "/home/inutano"
 
 def disk_full?
-  data_usage = `du /home/inutano/project/ER/data | cut -f 1`.chomp.to_i
-  fastq_usage = `du /home/inutano/project/ER/fastq | cut -f 1`.chomp.to_i
+  data_usage = `du /home/inutano/project/ER/data 2> /dev/null | cut -f 1`.chomp.to_i
+  fastq_usage = `du /home/inutano/project/ER/fastq 2> /dev/null | cut -f 1`.chomp.to_i
   disk_usage = data_usage + fastq_usage
   data_usage > 20_000_000_000 or disk_usage > 40_000_000_000
 end
