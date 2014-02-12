@@ -121,5 +121,5 @@ if __FILE__ == $0
       sample_metadata_hash[sampleid] ].flatten
   end
   sequence_spec = merged_table.group_by{|n| n.first }
-  open(out_dir + "/sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
+  open(out_dir + "/sequencespec.json","w"){|f| JSON.dump(sequence_spec, f) }
 end
