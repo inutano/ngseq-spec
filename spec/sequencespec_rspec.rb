@@ -41,7 +41,7 @@ describe SRAIDTable do
 
   context "with argument :sample" do
     before do
-      data_dir = "~/project/opensequencespec/data"
+      data_dir = "../data"
       @table_manager = SRAIDTable.new(data_dir, 4, :sample)
     end
     
@@ -57,6 +57,11 @@ describe SRAIDTable do
         expect(array.size).to eq(9)
       end
     
+      it "returns metadata xml file path for each id" do
+        fpath = @table_manager.get_xml_path(@id)
+        expect(File).to exist(fpath)
+      end
+
       it "parses metadata and return it as an array of profiles" do
         array = @table_manager.parse_metadata(@id)
         expect(array[0]).to eq("Bacillus subtilis subsp. natto BEST195 without plasmid pBEST195L")
