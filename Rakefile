@@ -46,7 +46,7 @@ namespace :dataset do
     if File.exist? fpath
       mv fpath, File.join("data", t.name + ts)
     end
-    base_url = "lftp ftp://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS"
+    base_url = "ftp://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS"
     sh "lftp -c \"open #{base_url} && pget -n 8 overview.txt\""
     sh "awk -F '\t' '$5 !~ \"-\" { print $1 \"\t\" $5 }' overview.txt > #{fpath}"
     rm "overview.txt"
