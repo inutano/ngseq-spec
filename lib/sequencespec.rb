@@ -90,35 +90,61 @@ if __FILE__ == $0
   runtable_json = out_dir + "/runtable.json"
 
   if !File.exist?(exp_json)
+    # expid => [expid, alias, strt, src, select, plat, inst]
     exptable = SRAIDTable.new(data_dir, num_of_process, :experiment)
     exp_metadata_hash = exptable.get_metadata_hash
     open(exp_json,"w"){|f| JSON.dump(exp_metadata_hash, f) }
   end
   
   if !File.exist?(sample_json)
+    # sampleid => [sampleid, alias, taxid]
     sampletable = SRAIDTable.new(data_dir, num_of_process, :sample)
     sample_metadata_hash = sampletable.get_metadata_hash
     open(sample_json,"w"){|f| JSON.dump(sample_metadata_hash, f) }
   end
   
   if !File.exist?(runtable_json)
+    # runid => [runid, acc, received, alias, exp, sample, project, bioproject, biosample]
     runtable = SRAIDTable.new(data_dir, num_of_process, :run).table
     open(runtable_json,"w"){|f| JSON.dump(runtable, f) }
   end
 
+  # load external reference table
+  # taxon id to scientific name
+  tax_sp = {}
+  open(data_dir+"taxon_table.csv").readlines.each do |line_n|
+    line = line_n.chomp.split(",")
+    tax_sp[line[0]] = line[1]
+  end
+  
+  # genome size by species
+  sp_gsize = {}
+  open(data_dir+"/sp_gsize.tab").readlines.each do |line_n|
+    line = line_n.chomp.split("\t")
+    sp_gsize[line[0]] = line[1]
+  end
+  
   # merge all information to runid
   exp_metadata_hash = open(exp_json){|f| JSON.load(f) }
   sample_metadata_hash = open(sample_json){|f| JSON.load(f) }
   runtable = open(runtable_json){|f| JSON.load(f) }
   
-  merged_table = Parallel.map(runtable.values, :in_processes => num_of_process) do |table|
-    runid = table.shift
-    expid = table[3]
-    sampleid = table[4]
-    [ runid,
-      table,
-      exp_metadata_hash[expid],
-      sample_metadata_hash[sampleid] ].flatten
+  merged_table = Parallel.map(runtable.values, :in_processes => num_of_process) do |run_meta|
+    exp_meta = exp_metadata_hash[run_meta[4]]
+    sample_meta = sample_metadata_hash[run_meta[5]]
+    spname = tax_sp[sample_meta[2]]
+    
+    # output table scheme:
+    # runid, subid, studyid, expid, sampleid,
+    [ run_meta[0], run_meta[1], run_meta[6], exp_meta[0], sample_meta[0],
+    # run_alias, exp_alias, sample_alias,
+      run_meta[3], exp_meta[1], sample_meta[1],
+    # lib strategy, source, selection, platform, instrument,
+      exp_meta[2], exp_meta[3], exp_meta[4], exp_meta[5], exp_meta[6],
+    # taxonomy id, scientific name, genus, estimated genome size (Mb, include NA),
+      sample_meta[2], spname, spname.split("\s").first, sp_gsize[spname],
+    # received date
+      run_meta[2] ]
   end
   sequence_spec = merged_table.group_by{|n| n.first }
   open(out_dir + "/sequencespec.json","w"){|f| JSON.dump(merged_table, f) }
