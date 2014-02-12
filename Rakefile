@@ -6,7 +6,7 @@ ts = Time.now.strftime("%Y%m%d-%H&M")
 
 namespace :dataset do
   desc "retrieve dataset from NCBI"
-  task :retrieve => ["SRA_Accessions.tab","SRA_Run_Members.tab","taxon_table.csv"]
+  task :retrieve => ["SRA_Accessions.tab","SRA_Run_Members.tab","taxon_table.csv","sp_gsize.tab"]
   
   directory "data"
   
@@ -38,6 +38,18 @@ namespace :dataset do
     rm "gc.prt"
     rm "readme.txt"
     rm "taxdump.tar.gz"
+  end
+  
+  desc "Download taxonomy ID <=> estimated genome size table"
+  file "sp_gsize.tab" => "data" do |t|
+    fpath = File.join("data", t.name)
+    if File.exist? fpath
+      mv fpath, File.join("data", t.name + ts)
+    end
+    base_url = "lftp ftp://ftp.ncbi.nlm.nih.gov/genomes/GENOME_REPORTS"
+    sh "lftp -c \"open #{base_url} && pget -n 8 overview.txt\""
+    sh "awk -F '\t' '$5 !~ \"-\" { print $1 \"\t\" $5 }' overview.txt > #{fpath}"
+    rm "overview.txt"
   end
 end
 
