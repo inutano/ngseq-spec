@@ -78,6 +78,68 @@ class SRAIDTable
     grouped_by_id = metadatalist.compact.group_by{|array| array.first }
     grouped_by_id.each{|k,v| grouped_by_id[k] = v.flatten }
   end
+
+  # taxon id to scientific name
+  def self.taxid2sname(fpath)
+    hash = {}
+    open(fname).readlines.each do |line_n|
+      line = line_n.chomp.split(",")
+      hash[line[0]] = line[1]
+    end
+    hash
+  end
+
+  # genome size by species
+  def self.spname2gsize(fpath)
+    hash = {}
+    open(fpath).readlines.each do |line_n|
+      line = line_n.chomp.split("\t")
+      hash[line[0]] = line[1]
+    end
+    hash
+  end
+  
+  def sname(taxon_id, tax_sp)
+    if taxon_id != "NA"
+      tax_sp[taxon_id]
+    else
+      "NA"
+    end
+  end
+  
+  def genus(sname)
+    if sname != "NA"
+      sname.split("\s").first
+    else
+      "NA"
+    end
+  end
+  
+  def gsize(sname, sp_gsize)
+    if sp_gsize(sname)
+      sp_gsize(sname)
+    else
+      if sname.split("\s").size > 2
+        sname_a = sname.split("\s")
+        valid_sname = [sname_a[0], sname_a[1]].join("\s")
+        if sp_gsize(valid_sname)
+          sp_gsize(valid_sname)
+        else
+          "NA"
+        end
+      else
+        "NA"
+      end
+    end
+  end
+    
+  # taxonomy information, returns [sname, genus, gsize]
+  def self.taxonomy_info(taxon_id, tax_sp, sp_gsize)
+    sn = sname(taxon_id, tax_sp)
+    ge = genus(sn)
+    gs = gsize(sn, sp_gsize)
+    [sn, ge, gs]
+  end
 end
 
 if __FILE__ == $0
@@ -111,40 +173,20 @@ if __FILE__ == $0
 
   # load external reference table
   # taxon id to scientific name
-  tax_sp = {}
-  open(data_dir+"/taxon_table.csv").readlines.each do |line_n|
-    line = line_n.chomp.split(",")
-    tax_sp[line[0]] = line[1]
-  end
-  
+  tax_sp = SRAIDTable.taxid2sname(data_dir+"/taxon_table.csv")
+
   # genome size by species
-  sp_gsize = {}
-  open(data_dir+"/sp_gsize.tab").readlines.each do |line_n|
-    line = line_n.chomp.split("\t")
-    sp_gsize[line[0]] = line[1]
-  end
-  
+  sp_gsize = SRAIDTable.sname2gsize(data_dir+"/sp_gsize.tab")
+
   # merge all information to runid
   exp_metadata_hash = open(exp_json){|f| JSON.load(f) }
   sample_metadata_hash = open(sample_json){|f| JSON.load(f) }
   runtable = open(runtable_json){|f| JSON.load(f) }
   
   merged_table = Parallel.map(runtable.values, :in_processes => num_of_process) do |run_meta|
-    exp_meta = exp_metadata_hash[run_meta[4]]
-    sample_meta = sample_metadata_hash[run_meta[5]]
-    
-    taxon_id = sample_meta[2]
-    if taxon_id
-      spname = tax_sp[taxon_id]
-      genus = spname.split("\s").first
-      if sp_gsize[spname]
-        gsize = sp_gsize[spname]
-      else
-        gsize = "NA"
-      end
-    else
-      spname, genus, gsize = 3.times.map{ "NA" }
-    end
+    exp_meta = exp_metadata_hash[run_meta[4]] || [run_meta[4]] + 6.times.map{"NA"}
+    sample_meta = sample_metadata_hash[run_meta[5]] || [run_meta[5]] + 2.times.map{"NA"}
+    taxinfo = SRAIDTable.taxonomy_info(sample_meta[2], tax_sp, sp_gsize)
     
     # output table scheme:
     # runid, subid, studyid, expid, sampleid,
@@ -154,7 +196,7 @@ if __FILE__ == $0
     # lib strategy, source, selection, platform, instrument,
       exp_meta[2], exp_meta[3], exp_meta[4], exp_meta[5], exp_meta[6],
     # taxonomy id, scientific name, genus, estimated genome size (Mb, include NA),
-      taxon_id, spname, genus, gsize,
+      sample_meta[2], taxinfo[0], taxinfo[1], taxinfo[2],
     # received date
       run_meta[2] ]
   end
