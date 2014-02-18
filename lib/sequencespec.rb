@@ -112,7 +112,7 @@ if __FILE__ == $0
   # load external reference table
   # taxon id to scientific name
   tax_sp = {}
-  open(data_dir+"taxon_table.csv").readlines.each do |line_n|
+  open(data_dir+"/taxon_table.csv").readlines.each do |line_n|
     line = line_n.chomp.split(",")
     tax_sp[line[0]] = line[1]
   end
@@ -132,7 +132,19 @@ if __FILE__ == $0
   merged_table = Parallel.map(runtable.values, :in_processes => num_of_process) do |run_meta|
     exp_meta = exp_metadata_hash[run_meta[4]]
     sample_meta = sample_metadata_hash[run_meta[5]]
-    spname = tax_sp[sample_meta[2]]
+    
+    taxon_id = sample_meta[2]
+    if taxon_id
+      spname = tax_sp[taxon_id]
+      genus = spname.split("\s").first
+      if sp_gsize[spname]
+        gsize = sp_gsize[spname]
+      else
+        gsize = "NA"
+      end
+    else
+      spname, genus, gsize = 3.times.map{ "NA" }
+    end
     
     # output table scheme:
     # runid, subid, studyid, expid, sampleid,
@@ -142,7 +154,7 @@ if __FILE__ == $0
     # lib strategy, source, selection, platform, instrument,
       exp_meta[2], exp_meta[3], exp_meta[4], exp_meta[5], exp_meta[6],
     # taxonomy id, scientific name, genus, estimated genome size (Mb, include NA),
-      sample_meta[2], spname, spname.split("\s").first, sp_gsize[spname],
+      taxon_id, spname, genus, gsize,
     # received date
       run_meta[2] ]
   end
