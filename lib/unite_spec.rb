@@ -62,7 +62,7 @@ if __FILE__ == $0
   
   # merge readspec and metadata
   invalid_pairs = []
-  spec = Parallel.map(readspec.first(10000), :in_threads => num_of_threads) do |id, readspec_a|
+  spec = Parallel.map(readspec, :in_threads => num_of_threads) do |id, readspec_a|
     readspec = readspec_a.flatten
     md = sequencespec[id].flatten
     
