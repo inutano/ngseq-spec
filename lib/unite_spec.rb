@@ -11,7 +11,7 @@ def header
       max_length
       mean_length
       median_length
-      %gc
+      gc
       phred
       n_cont
       duplicate
