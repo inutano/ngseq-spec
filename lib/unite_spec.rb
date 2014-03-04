@@ -4,6 +4,40 @@ require "json"
 require "parallel"
 require "fileutils"
 
+def header
+  %w{ runid
+      num_of_reads
+      min_length
+      max_length
+      mean_length
+      median_length
+      %gc
+      phred
+      n_cont
+      duplicate
+      layout
+      subid
+      studyid
+      expid
+      sampleid
+      run_alias
+      exp_alias
+      sample_alias
+      strategy
+      source
+      selection
+      platform
+      instrument
+      taxonid
+      sname
+      genus
+      gsize
+      received
+      throughput
+      coverage
+    }.join("\t")
+end
+
 def get_throughput(num_of_reads, mean_length, layout)
   multiple = case layout
              when "single"
@@ -81,7 +115,7 @@ if __FILE__ == $0
   invalid_fpath = "#{result_path}/invalid_pairs.txt"
   
   ts = Time.now.strftime("%Y%m%d-%H%M")
-  [[us_fpath, spec], [invalid_fpath, invalid_pairs]].each do |array|
+  [[us_fpath, [header] + spec], [invalid_fpath, invalid_pairs]].each do |array|
     fpath = array[0]
     FileUtils.mv fpath, fpath + "." + ts if File.exist?(fpath)
     open(fpath,"w"){|f| f.puts(array[1].compact) }
