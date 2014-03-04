@@ -1,1 +1,1 @@
-/home/inutano/project/sra_metadata_toolkit/sra_metadata_parser.rb
+~/project/sra_metadata_toolkit/sra_metadata_parser.rb
