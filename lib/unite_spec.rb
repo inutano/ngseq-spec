@@ -6,23 +6,23 @@ require "fileutils"
 
 def header
   %w{ runid
-      num_of_reads
-      min_length
-      max_length
-      mean_length
-      median_length
+      numOfReads
+      minLength
+      maxLength
+      meanLength
+      medianLength
       gc
       phred
-      n_cont
+      nCont
       duplicate
       layout
       subid
       studyid
       expid
       sampleid
-      run_alias
-      exp_alias
-      sample_alias
+      runAlias
+      expAlias
+      sampleAlias
       strategy
       source
       selection
