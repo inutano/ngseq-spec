@@ -3,3 +3,7 @@ junk/
 log
 result/
 fastqc_data
+plot/.RData
+plot/.Rhistory
+plot/data.tab
+spec/unite_spec_rspec.rb
