@@ -106,7 +106,7 @@ if __FILE__ == $0
     loop do
       mess "begin transmission"
       available = db.select{|r| r.status == 1 }.map{|r| r } # cannot be replaced by #compact, this is Groonga::Hash
-      to_be_processed = available[0..15]
+      to_be_processed = available[0..36]
       
       if to_be_processed.empty?
         mess "all available entries calcurated!"
@@ -241,35 +241,39 @@ if __FILE__ == $0
     qc_processed = db.select{|record| record.status == 5 }
     
     qc_processed.each do |record|
-      runid = record.key.key
+      runid = record["_key"]
       zip_path = File.join(config["result_path"], runid.slice(0..5), runid)
       if !File.exist?(zip_path)
-        ap "file not found"
-        ap zip_path
+        puts ["file not found", zip_path].join("\t")
+      elsif Dir.entries(zip_path).select{|f| f =~ /zip$/ }.empty?
+        puts ["empty directory", zip_path].join("\t")
+      else
+        puts ["seems good to me", zip_path, Dir.entries(zip_path).select{|f| f =~ /zip$/ }].flatten.join("\t")
+        status = 6
       end
     end
   
   when "--debug"
+    # EXAMPLE
+    # array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
+    # array = open("./list").readlines
+    # array = Dir.glob("./data/*.fastq.bz2").map{|n| n.gsub(/^\.\/data\//,"").gsub(/\.fastq\.bz2$/,"").gsub(/_.$/,"") }
     db = Groonga["SRAIDs"]
-    
-    #array = (367..371).to_a.map{|n| "DRR" + "%06d" % n }
-    #array = open("./list/drr_missing").readlines
-    #array = open("./error_list").readlines
-    #array = db.select{|rec| rec.status == 5 }
-    #array = Dir.glob("./data/*.fastq.bz2")
-    array = []
-    #array = open("./idlist").readlines
+
     array.each do |node|
-      #id = node.gsub(/^\.\/data\//,"").gsub(/\.fastq\.bz2$/,"").gsub(/_.$/,"")
-      #record = db[id]
-      record = db[node.chomp]
+      id = node
+      record = db[id]
+      #record = db[node.chomp]
+      record.status = 3
       #record.status = 1
       #record.status = 6
       #ap node.key.key
       #node.status = 6
       #ap record.status
     end
-    
+  
+  when "--status"
+    db = Groonga["SRAIDs"]
     ap "available: " + db.select{|r| r.status == 1 }.size.to_s
     ap "controlled: " + db.select{|r| r.status == 2 }.size.to_s
     ap "downloaded: " + db.select{|r| r.status == 3 }.size.to_s
@@ -279,4 +283,4 @@ if __FILE__ == $0
     ap "lost: " + db.select{|r| r.status == 7 }.size.to_s
   end
 end
- 
+
