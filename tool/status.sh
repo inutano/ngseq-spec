@@ -18,6 +18,6 @@ echo "number of fastqc result files"
 ls /home/inutano/project/ER/fastq/*zip | wc -l
 echo ""
 echo "disk size"
-du -h /home/inutano/project/ER/data/
-du -h /home/inutano/project/ER/fastq/
-du -h /home/inutano/project/ER/fqdumpfailed/
+du -h /home/inutano/project/ER/data/ 2> /dev/null
+du -h /home/inutano/project/ER/fastq/ 2> /dev/null
+du -h /home/inutano/project/ER/fqdumpfailed/ 2> /dev/null
