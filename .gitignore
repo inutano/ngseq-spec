@@ -12,3 +12,14 @@ table/
 data/
 fastq/
 download/
+.bundle/
+.ruby-version
+april2013/
+data/
+db/
+fastqc_data
+march2013/
+sra_metadata
+tmp/
+lib/config.yaml
+taxonomy/
