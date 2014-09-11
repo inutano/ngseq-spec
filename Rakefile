@@ -1,18 +1,21 @@
 task :default => :about
 
 namespace :qc do
+  desc "Make required directories"
+  directory "download" "fq" "qc"
+  
   desc "Download raw sequence file from SRA repository"
-  task :download do
+  task :download => "download "do
     ruby("lib/ngseq-spec/file-transfer.rb")
   end
   
   desc "Unarchive raw sequence file"
-  task :unarchive do
+  task :unarchive => "fq" do
     ruby("lib/ngseq-spec/unarchive.rb")
   end
   
   desc "Exec FastQC to obtained data sets"
-  task :fastqc do
+  task :fastqc => "qc" do
     ruby("lib/ngseq-spec/fastqc.rb")
   end
   
