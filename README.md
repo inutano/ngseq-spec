@@ -1,6 +1,6 @@
 # Open Sequence Spec
 
-See how every sequencing goes.
+Merged 4 Related Repositories, I'm gonna clean up and make it simple to be easy to reuse.
 
 # SRA quality check project:
 
