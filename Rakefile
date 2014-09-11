@@ -1,9 +1,59 @@
-# -*- coding: utf-8 -*-
-
 task :default => :about
 
-ts = Time.now.strftime("%Y%m%d-%H&M")
+namespace :qc do
+  desc "Download raw sequence file from SRA repository"
+  task :download do
+  end
+  
+  desc "Unarchive raw sequence file"
+  task :unarchive do
+  end
+  
+  desc "Exec FastQC to obtained data sets"
+  task :fastqc do
+  end
+  
+  desc "Move result file to archive directory and flush"
+  task :flush do
+  end
+end
 
+namespace :seqspec do
+  desc "Unzip QC data"
+  task :unzip do
+  end
+  
+  desc "Parse QC data and round values"
+  task :parse do
+  end
+  
+  desc "Parse metadata and create annotation data"
+  task :annotate do
+  end
+  
+  desc "Merge QC data and annotation"
+  task :merge do
+  end
+end
+
+namespace :mdata do
+  desc "Update required metadata"
+  task :retrieve do
+  end
+end
+
+task :about do
+  str = <<-EOF
+    qc:      generate qc data
+    seqspec: summarise and annotate qc data
+    mdata:   retrieve or update metadata
+    see more details by rake -T
+  EOF
+  puts str
+end
+
+
+=begin
 namespace :dataset do
   desc "retrieve dataset from NCBI"
   task :retrieve => ["SRA_Accessions.tab","SRA_Run_Members.tab","taxon_table.csv","sp_gsize.tab"]
@@ -92,3 +142,4 @@ end
 task :about do
   puts "Rake to set up required datasets"
 end
+=end
