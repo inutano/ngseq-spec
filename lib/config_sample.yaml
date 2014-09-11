@@ -1,0 +1,11 @@
+# config.yaml, current dir is ..
+
+db_path: "/path/to/db/sraid.db"
+log_path: "/path/to/log/db.log"
+fpath:
+  resources: "/path/to/resources"
+  sra_accessions: "/path/to/resources/SRA_Accessions.tab"
+  sra_run_members: "/path/to/resources/SRA_Run_Members.tab"
+  publication: "/path/to/resources/publication.json"
+  publication_url: "http://sra.dbcls.jp/cgi-bin/publication2.php"
+  ncbi_ftp: "ftp.ncbi.nlm.nih.gov/sra/reports/Metadata"
