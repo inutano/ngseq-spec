@@ -1,1 +1,0 @@
-/Users/inutano/project/soylatte/lib/lib_db_update.rb
