@@ -3,18 +3,22 @@ task :default => :about
 namespace :qc do
   desc "Download raw sequence file from SRA repository"
   task :download do
+    ruby("lib/ngseq-spec/file-transfer.rb")
   end
   
   desc "Unarchive raw sequence file"
   task :unarchive do
+    ruby("lib/ngseq-spec/unarchive.rb")
   end
   
   desc "Exec FastQC to obtained data sets"
   task :fastqc do
+    ruby("lib/ngseq-spec/fastqc.rb")
   end
   
   desc "Move result file to archive directory and flush"
   task :flush do
+    ruby("lib/ngseq-spec/flush.rb")
   end
 end
 
