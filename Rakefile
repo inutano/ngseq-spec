@@ -44,10 +44,24 @@ end
 
 task :about do
   str = <<-EOF
+    \# List of namespaces:
     qc:      generate qc data
-    seqspec: summarise and annotate qc data
     mdata:   retrieve or update metadata
+    seqspec: summarise and annotate qc data
+    
     see more details by rake -T
+    
+    \# Metadata files are required to be updated
+    rake mdata:update   \# Download SRA metadata files and the other required files to 'mdata' directory
+    
+    \# To Generate QC data, run
+    rake qc:download    \# Download qc data to 'download' folder
+    rake qc:unarchive   \# Unarchive all data in download folder and move to 'fq' folder
+    rake qc:fastqc      \# Execute FastQC to all data in fq folder
+    rake qc:flush       \# Move FastQC data file from fq to fastqc directory, remove failed data
+    
+    \# To make summarised and annotated qc data, run
+    rake seqspec:run    \# Run unzip, parse, annotate and merge to create summarised data
   EOF
   puts str
 end
