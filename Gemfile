@@ -1,4 +1,2 @@
 source "https://rubygems.org"
-
-gem "parallel"
-gem "groonga"
+ruby "2.1.2"
